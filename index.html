@@ -356,6 +356,8 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
 <script>
 /* ============ 配置 ============ */
 const DEFAULT_PW_HASH = "b4217f44f263ff7902be23585e51381d5d80a4d4794a9cedb7df2d17f4d9de77"; // shezhangyihao
+/* 密码锁总开关：false = 打开即用、不弹密码框；想恢复密码锁把它改回 true 即可 */
+const LOCK_ON = false;
 const IDX = "data/index.json", LIBP = "lib/";
 /* ---- 文库正文加密（AES-256-CTR）：线上只存密文，密文与明文等长，
        所以索引里的字节偏移、Range 取文逻辑完全不变，只在读出来后加一步解密。 ---- */
@@ -423,7 +425,12 @@ async function unlock(){
   }
 }
 document.getElementById("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") unlock(); });
-if(sessionStorage.getItem("sz1_ok")==="1"){
+if(!LOCK_ON){
+  /* 密码锁已关：直接进入 */
+  sessionStorage.setItem("sz1_ok","1");
+  document.getElementById("lock").style.display="none";
+  document.getElementById("app").style.display="flex";
+} else if(sessionStorage.getItem("sz1_ok")==="1"){
   document.getElementById("lock").style.display="none";
   document.getElementById("app").style.display="flex";
 }
