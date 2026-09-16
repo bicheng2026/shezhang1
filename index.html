@@ -177,6 +177,13 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <button class="iconbtn" onclick="openMem()" title="长期记忆">记忆<span id="memcnt"></span></button>
     <button class="iconbtn" onclick="openSet()">设置</button>
   </header>
+  <div id="updbar" style="display:none;align-items:center;gap:10px;padding:9px 16px;
+       background:linear-gradient(90deg,rgba(90,209,192,.20),rgba(90,209,192,.05));
+       border-bottom:1px solid var(--teal);font-size:13px;color:var(--teal)">
+    <span style="flex:1">🔄 题库/文库有新内容，刷新即可载入</span>
+    <button class="iconbtn" style="border-color:var(--teal);color:var(--teal)"
+            onclick="hardReload()">立即刷新</button>
+  </div>
   <div id="chat"><div id="loading">正在载入文库索引…</div></div>
   <div id="bar">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
@@ -327,7 +334,9 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <input id="acolor" type="color" value="#e3eef0">
     <label>回答显示速度（字/秒，0=即时；默认25）</label>
     <input id="tspeed" type="range" min="0" max="120" step="5" value="25">
+    <button class="close" onclick="hardReload()">🔄 强制刷新（清缓存 · 载入最新版）</button>
     <button class="btn" onclick="clearLocal()" style="background:var(--line)">清除本机数据（退出并清空配置）</button>
+    <div class="hint" id="verhint" style="margin-top:8px">当前版本：载入中…</div>
     <div class="hint" style="margin-top:6px">仅清除你当前这台设备的数据（密码、API Key、会话），不影响他人。清除后需重新输入密码与 Key。</div>
     <div style="margin-top:16px;font-size:11.5px;color:var(--dim);line-height:1.9">
       <b style="color:var(--teal)">关于蛇杖一号</b><br>
@@ -1916,6 +1925,7 @@ function openSet(){
   document.getElementById("acolor").value = localStorage.getItem("sz1_acolor")||"#e3eef0";
   document.getElementById("tspeed").value = localStorage.getItem("sz1_tspeed")||"25";
   document.getElementById("mask").style.display = "flex";
+  checkVer();          /* 打开设置时顺手查一下版本 */
 }
 function closeSet(){ document.getElementById("mask").style.display = "none"; }
 async function clearLocal(){
@@ -1981,20 +1991,70 @@ document.querySelectorAll("#vchips .chip").forEach(c=>{
   if(el) el.addEventListener("input", ()=>{ localStorage.setItem("sz1_"+id, el.value); applyFont(); });
 });
 
-/* ============ PWA：注册 Service Worker + 快捷方式参数 ============ */
+/* ============ 自动更新：版本检测 + Service Worker ============ */
+let _ver = "", _updShown = false;
+async function checkVer(){
+  try{
+    const r = await fetch("version.json?t=" + Date.now(), {cache:"no-store"});
+    if(!r.ok) return;
+    const j = await r.json();
+    if(!j || !j.build) return;
+    const vh = document.getElementById("verhint");
+    if(!_ver){
+      _ver = j.build;                              /* 首次只记录基线，不提示 */
+      if(vh) vh.textContent = "当前版本：" + _ver + "（已是最新）";
+      return;
+    }
+    if(j.build !== _ver){
+      if(vh) vh.textContent = "当前版本：" + _ver + "　→　线上新版：" + j.build;
+      if(!_updShown){
+        _updShown = true;
+        const b = document.getElementById("updbar");
+        if(b) b.style.display = "flex";
+        if(document.title.indexOf("🔄") !== 0) document.title = "🔄 " + document.title;
+      }
+    } else if(vh){
+      vh.textContent = "当前版本：" + _ver + "（已是最新）";
+    }
+  }catch(e){ /* 离线或取不到就算了 */ }
+  /* 顺手催一下 Service Worker 检查有没有新版本 */
+  try{
+    const rs = await navigator.serviceWorker.getRegistrations();
+    rs.forEach(r => r.update());
+  }catch(e){}
+}
+function hardReload(){
+  (async () => {
+    try{
+      if(window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); }
+    }catch(e){}
+    location.reload();
+  })();
+}
 (function(){
   const secure = location.protocol === "https:" ||
                  ["localhost","127.0.0.1"].indexOf(location.hostname) >= 0;
   if("serviceWorker" in navigator && secure){
-    window.addEventListener("load", ()=>{
-      navigator.serviceWorker.register("sw.js").catch(()=>{ /* 注册失败不影响使用 */ });
-    });
+    navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).catch(()=>{});
+    /* 已有 SW 在控制页面时，新 SW 接管后自动重载（首次注册不触发，避免多余刷新） */
+    if(navigator.serviceWorker.controller){
+      let done = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if(done) return;
+        done = true;
+        location.reload();
+      });
+    }
   }
-  /* 桌面 / 主屏快捷方式：./?m=quiz 或 ./?m=outline 打开即进入对应模式 */
+  /* 快捷方式参数：./?m=quiz 或 ./?m=outline */
   try{
     const m = new URLSearchParams(location.search).get("m");
     if(m === "quiz" || m === "outline"){ _mode = m; setModeTag(); }
   }catch(e){}
+  /* 定时 + 切回前台时检查更新 */
+  setTimeout(checkVer, 3000);
+  setInterval(checkVer, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) checkVer(); });
 })();
 
 /* ============ 启动（放在最后：此时 SS / MEM / 各函数均已就绪）============ */
