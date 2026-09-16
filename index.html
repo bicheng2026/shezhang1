@@ -1681,6 +1681,9 @@ const NET_SRC = [
   { id:"pmd", name:"PubMed 文献摘要", kind:"pmd", need:false,
     desc:"免 Key ·  NIH 官方接口，可直连 · 查英文医学文献题录与摘要（供学习参考）",
     probe:"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=shock&retmode=json&retmax=1" },
+  { id:"gxmu", name:"广西医科大学官网（含内网查看）", kind:"gxmu", need:false,
+    desc:"实时抓校网各栏目 · 需在本机运行校园网代理（web/gxmu_proxy.py）；连着校园网时连「内网查看」也能读到。代理没开则自动降级为公开栏目",
+    probe:"http://127.0.0.1:8898/ping" },
 ];
 
 const escA = s => String(s==null?"":s).replace(/[&<>"']/g,
@@ -1795,6 +1798,36 @@ const NET = {
     });
   },
 
+  /* 校网：优先问本机代理（能进「内网查看」），代理没开就降级抓公开栏目 */
+  async _gxmu(q){
+    const P = "http://127.0.0.1:8898";
+    let via = "本机代理";
+    try{
+      const r = await this._t(P + "/search?q=" + encodeURIComponent(q) + "&n=4", 12000);
+      if(r.ok){
+        const j = await r.json();
+        if(j && j.hits && j.hits.length){
+          return j.hits.map(h => ({
+            t: (h.sectionName ? "[" + h.sectionName + "] " : "") + (h.title || "（无标题）"),
+            x: ((h.date ? h.date + "　" : "") + String(h.snippet || h.sectionName || "")
+                 .replace(/\s+/g, " ").trim()).slice(0, 600)
+          })).filter(x => x.x.length > 15);
+        }
+      }
+    }catch(e){ /* 代理没开或超时，走降级 */ }
+
+    via = "公开栏目";
+    try{
+      const r2 = await this._t("https://r.jina.ai/https://www.gxmu.edu.cn/xwgk/wwtz/", 14000);
+      if(r2.ok){
+        const t = String(await r2.text() || "").replace(/\s+/g, " ").trim();
+        if(t.length > 150)
+          return [{ t:"[公开栏目] 广西医科大学 · 通知公告", x:t.slice(0, 1200) }];
+      }
+    }catch(e){}
+    return [];
+  },
+
   async _search(id, q){
     const ck = id + "\u0000" + q;
     if(this.cache[ck]) return this.cache[ck];
@@ -1805,6 +1838,7 @@ const NET = {
     else if(kind === "zhwiki") out = await this._wiki(WIKI_ZH, q);
     else if(kind === "enwiki") out = await this._wiki(WIKI_EN, q);
     else if(kind === "pmd")    out = await this._pubmed(q);
+    else if(kind === "gxmu")   out = await this._gxmu(q);
     this.cache[ck] = out;
     return out;
   },
