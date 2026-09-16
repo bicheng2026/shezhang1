@@ -1798,9 +1798,17 @@ const NET = {
     });
   },
 
-  /* 校网：优先问本机代理（能进「内网查看」），代理没开就降级抓公开栏目 */
+  /* 校网：本页若就是代理托管的（http://127.0.0.1:8898/）→ 同源直接读；
+     否则（github.io 的 HTTPS 页）尝试跨到本地，但浏览器会因「混合内容」拦下，属预期。 */
+  GXMU_PORT: 8898,
+  gxmuBase(){
+    const local = (location.hostname === "127.0.0.1" || location.hostname === "localhost");
+    return (local && String(location.port) === String(this.GXMU_PORT))
+      ? ""                                        /* 同源：代理本身就是网站 */
+      : "http://127.0.0.1:" + this.GXMU_PORT;     /* 远端页：跨到本地（多半被拦） */
+  },
   async _gxmu(q){
-    const P = "http://127.0.0.1:8898";
+    const P = this.gxmuBase();
     let via = "本机代理";
     try{
       const r = await this._t(P + "/search?q=" + encodeURIComponent(q) + "&n=4", 12000);
@@ -1855,7 +1863,8 @@ const NET = {
           ? {id:s.id, ok:true, ms, note:"检索正常，返回 "+items.length+" 条"}
           : {id:s.id, ok:false, ms, note:"有响应但无结果（Key 可能无效或无额度）"};
       }
-      const r = await this._t(s.probe, 8000);
+      const pUrl = (s.id === "gxmu") ? (this.gxmuBase() + "/ping") : s.probe;
+      const r = await this._t(pUrl, 8000);
       const ms = Math.round(performance.now()-t0);
       if(!r.ok) return {id:s.id, ok:false, ms, note:"HTTP "+r.status};
       const txt = await r.text();
