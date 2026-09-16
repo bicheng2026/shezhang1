@@ -1,0 +1,9 @@
+{
+ "alg": "AES-256-CTR",
+ "kdf": "PBKDF2-HMAC-SHA256",
+ "iter": 210000,
+ "salt": "shezhang1-ctx-v1",
+ "nonce": "HMAC-SHA256(master, rel)[:12]",
+ "indexRel": "__INDEX__",
+ "enc": true
+}
