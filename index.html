@@ -169,25 +169,16 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
   </header>
   <div id="chat"><div id="loading">正在载入文库索引…</div></div>
   <div id="bar">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <button class="thinkbtn" style="margin:0" onclick="document.getElementById('filein').click()">📎 传图 / 传文件</button>
-      <button class="thinkbtn" style="margin:0" onclick="askMode('quiz')">📝 出题练习</button>
-      <button class="thinkbtn" style="margin:0" onclick="askMode('outline')">📚 记忆大纲</button>
-      <button class="thinkbtn" style="margin:0" onclick="askMode('')">💬 普通问答</button>
-      <button class="thinkbtn" style="margin:0" onclick="TOOLS.draw(this)" title="AI 绘图（需在设置里配置图像接口；不读文库）">🎨 AI 绘图</button>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-      <button id="thinkbtn" class="thinkbtn" style="margin:0" onclick="toggleThink()">💭 深度思考：关</button>
-      <button id="netbtn" class="thinkbtn" style="margin:0" onclick="openNet()">🌐 联网参考：关</button>
-      <button id="altbtn" class="thinkbtn" style="margin:0" onclick="reaskAlt()" title="把上一个问题发到备用端点">🔁 换端点重问</button>
-      <button id="rwbtn" class="thinkbtn" style="margin:0" onclick="reaskRewrite()" title="自动改写成中性问法后重发">✎ 改写重问</button>
-      <button id="modebtn" class="thinkbtn" style="margin:0;display:none" onclick="askMode('')"></button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+      <button class="thinkbtn" style="margin:0" onclick="document.getElementById('filein').click()">📎 上传</button>
+      <button id="netbtn" class="thinkbtn" style="margin:0" onclick="openNet()">🌐 联网：关</button>
+      <span id="modetag" style="display:none;font-size:12px;color:var(--teal);border:1px solid var(--teal);border-radius:20px;padding:5px 11px;cursor:pointer" onclick="askMode('')" title="点击退出"></span>
     </div>
     <div id="attbar" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
     <input type="file" id="filein" multiple style="display:none"
            accept="image/*,.pdf,.docx,.doc,.txt,.md,.csv,.json">
     <div class="row">
-      <textarea id="q" rows="1" placeholder="问点什么？也可先传图或传文件（教材截图、题库、病历、检验单……）再提问"></textarea>
+      <textarea id="q" rows="1" placeholder="问点什么？可先传图或传文件；输入 / 可用出题、大纲、画图等功能"></textarea>
       <button id="send" onclick="ask()">发送</button>
     </div>
     <div class="tip">教材原文优先，回答可追溯出处；仅供学习参考，不构成诊疗意见。Enter 发送 / Shift+Enter 换行</div>
@@ -277,6 +268,10 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <label>备用模型名</label>
     <input id="model2" placeholder="glm-4.7">
     <div class="hint">填好备用端点后，底部「🔁 换端点重问」可把同一问题发到另一家服务商——各家尺度不同，此路不通走彼路。备用 Key 与主链路同样只存本机浏览器。</div>
+    <label style="display:flex;align-items:flex-start;gap:8px;color:var(--ink);margin:12px 0 5px">
+      <input type="checkbox" id="thinksw" onchange="setThink(this.checked)" style="width:auto;flex-shrink:0;margin-top:4px">
+      <span>默认开启深度思考<br><span style="color:var(--dim);font-size:11.5px">也可以在输入框直接敲 <b>/think</b> 随时切换</span></span>
+    </label>
     <label>深度思考模型（可选，留空则沿用上面模型）</label>
     <input id="mdlthink" placeholder="留空 = 沿用当前模型">
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
@@ -681,7 +676,13 @@ async function ask(opt){
   opt = opt || {};
   const which = opt.which === "alt" ? "alt" : "pri";
   const el = document.getElementById("q");
-  const q = (opt.q != null) ? String(opt.q).trim() : el.value.trim();
+  const fromInput = (opt.q == null);
+  /* 来自输入框的内容先看是不是斜杠命令（/think /net /quiz /outline /draw /help） */
+  if(fromInput){
+    const raw = el.value.trim();
+    if(raw && slashCmd(raw)) return;
+  }
+  const q = fromInput ? el.value.trim() : String(opt.q).trim();
   if(!q) return;
   const cfg = cfgOf(which);
   if(!cfg.key){ openSet(); alert(which==="alt" ? "请先在设置里填写「备用端点」的接口地址与 API Key" : "请先在设置里填写 API Key"); return; }
@@ -870,7 +871,9 @@ async function ask(opt){
       `<button class="iconbtn" onclick="TOOLS.toWord(this)">📝 导出 Word</button>` +
       `<button class="iconbtn" onclick="TOOLS.diagram(this)">🧩 生成示意图</button>` +
       `<button class="iconbtn" onclick="TOOLS.quiz(this)">❓ 据此出题</button>` +
-      `<button class="iconbtn" onclick="TOOLS.outline(this)">📚 据此处大纲</button>`;
+      `<button class="iconbtn" onclick="TOOLS.outline(this)">📚 据此处大纲</button>` +
+      `<button class="iconbtn" onclick="reaskAlt()" title="把上一个问题发到备用端点">🔁 换端点</button>` +
+      `<button class="iconbtn" onclick="reaskRewrite()" title="自动改写成中性问法后重发">✎ 改写重问</button>`;
     b.parentElement.appendChild(barEl);
   }
   SS.touch();
@@ -941,13 +944,10 @@ function applyModel(){
 }
 function applyThink(){
   const on = localStorage.getItem("sz1_think")==="1";
-  const b = document.getElementById("thinkbtn");
-  if(b){ b.classList.toggle("on", on); b.textContent = "💭 深度思考：" + (on?"开":"关"); }
+  const cb = document.getElementById("thinksw");
+  if(cb) cb.checked = on;
 }
-function toggleThink(){
-  localStorage.setItem("sz1_think", localStorage.getItem("sz1_think")==="1" ? "0" : "1");
-  applyThink(); applyModel();
-}
+/* 深度思考的开关函数见上方 setThink / toggleThink */
 const _typers = new WeakMap();
 function typeInto(el, text, rate){
   let st=_typers.get(el);
@@ -1244,14 +1244,13 @@ ${txt.slice(0, 6000)}`;
     im.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(s)));
   },
 
-  /* ---- 可选：AI 绘图（需在设置里填图像生成接口） ---- */
-  async draw(btn){
-    const q = prompt("要画什么？（建议写清部位、视角、风格）");
-    if(!q) return;
+  /* ---- 可选：AI 绘图（需在设置里填图像生成接口）---- */
+  async drawText(q){
+    if(!q){ addMsg("系统", "用法：<b>/draw 要画的内容</b>，例如 <b>/draw 心脏传导系统示意图</b>", "sys"); return; }
     const base = (localStorage.getItem("sz1_ibase")||"").replace(/\/$/,"");
     const key  = localStorage.getItem("sz1_ikey")||"";
     const mdl  = localStorage.getItem("sz1_imodel")||"cogview-3-flash";
-    if(!base || !key){ openSet(); return alert("请先在设置里填写「图像生成接口」与 Key"); }
+    if(!base || !key){ openSet(); addMsg("系统", "🎨 绘图需要先在「设置 → 图像生成接口」里填接口地址与 Key。", "sys"); return; }
     const bub = addMsg("蛇杖一号", "正在绘制…", "sys");
     try{
       const r = await fetch(base + "/images/generations", {
@@ -1310,22 +1309,77 @@ ${txt.slice(0, 6000)}`;
   }
 };
 
-/* ============ 任务模式切换 ============ */
+/* ============ 任务模式（由斜杠命令进入，标签可点退出）============ */
 let _mode = "";
 const MODE_NAME = { quiz:"📝 出题练习", outline:"📚 记忆大纲", "":"💬 普通问答" };
+function setModeTag(){
+  const tag = document.getElementById("modetag");
+  if(!tag) return;
+  if(_mode){ tag.style.display = ""; tag.textContent = MODE_NAME[_mode] + " ✕"; }
+  else { tag.style.display = "none"; }
+}
 function askMode(m){
   _mode = m || "";
-  const b = document.getElementById("modebtn");
-  if(_mode){
-    b.style.display = ""; b.classList.add("on");
-    b.textContent = MODE_NAME[_mode] + " · 点此退出";
-  } else {
-    b.style.display = "none"; b.classList.remove("on");
-  }
+  setModeTag();
   const q = document.getElementById("q").value.trim();
   if(q) ask({ mode:_mode });
   else document.getElementById("q").focus();
 }
+
+/* ============ 斜杠命令：界面只留两个按钮，其余功能在这里内嵌 ============ */
+const SLASH_HELP = `<b>可用命令</b>
+<div>/think · 深度思考 开/关</div>
+<div>/net · 联网参考 开/关</div>
+<div>/quiz 主题 · 出题练习（进入出题模式，点标签可退出）</div>
+<div>/outline 主题 · 记忆大纲</div>
+<div>/draw 描述 · AI 绘图（需在设置里配图像接口）</div>
+<div>/help · 显示这份说明</div>
+<div style="margin-top:6px;color:var(--dim)">不认识的 / 开头内容会当作普通问题照常提问。</div>`;
+function slashCmd(text){
+  const m = text.match(/^\/([A-Za-z\u4e00-\u9fa5]+)\s*([\s\S]*)$/);
+  if(!m) return false;
+  const cmd = m[1].toLowerCase(), arg = (m[2] || "").trim();
+  const el = document.getElementById("q");
+  const clear = ()=>{ el.value = ""; el.style.height = "auto"; };
+  if(["think","思考","深度思考"].includes(cmd)){
+    const on = localStorage.getItem("sz1_think") !== "1";
+    setThink(on); clear();
+    addMsg("系统", `💭 深度思考已${on ? "开启" : "关闭"}（设置里也有开关）`, "sys");
+    return true;
+  }
+  if(["net","联网"].includes(cmd)){
+    NET.setSw(!NET.on); clear();
+    addMsg("系统", `🌐 联网参考已${NET.on ? "开启" : "关闭"}`, "sys");
+    return true;
+  }
+  if(["quiz","出题"].includes(cmd)){
+    clear(); _mode = "quiz"; setModeTag();
+    ask({ q: arg || "请依据文库原文，出一套这个知识点的练习题。", mode:"quiz" });
+    return true;
+  }
+  if(["outline","大纲"].includes(cmd)){
+    clear(); _mode = "outline"; setModeTag();
+    ask({ q: arg || "请依据文库原文，整理一份记忆大纲。", mode:"outline" });
+    return true;
+  }
+  if(["draw","画","绘图"].includes(cmd)){
+    clear();
+    if(!arg) { addMsg("系统", "用法：/draw 要画的内容（例如 /draw 心脏传导系统示意图）", "sys"); return true; }
+    TOOLS.drawText(arg);
+    return true;
+  }
+  if(["help","?","帮助","h"].includes(cmd)){
+    clear(); addMsg("蛇杖一号", SLASH_HELP, "sys");
+    return true;
+  }
+  return false;   /* 未知命令 → 当普通问题 */
+}
+/* 深度思考开关（设置面板里的复选框 + /think 命令共用） */
+function setThink(on){
+  localStorage.setItem("sz1_think", on ? "1" : "0");
+  applyThink(); applyModel();
+}
+function toggleThink(){ setThink(localStorage.getItem("sz1_think") !== "1"); }
 
 /* ============ 附件入口：文件选择 + 拖拽 ============ */
 document.getElementById("filein").addEventListener("change", e=>{
@@ -1817,7 +1871,7 @@ function renderNetStat(){
 }
 function applyNet(){
   const b = document.getElementById("netbtn");
-  if(b){ b.classList.toggle("on", NET.on); b.textContent = "🌐 联网参考：" + (NET.on?"开":"关"); }
+  if(b){ b.classList.toggle("on", NET.on); b.textContent = "🌐 联网：" + (NET.on?"开":"关"); }
   const sw = document.getElementById("netsw");
   if(sw) sw.checked = NET.on;
 }
