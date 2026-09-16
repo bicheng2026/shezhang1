@@ -251,7 +251,10 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <label>接口地址（兼容 OpenAI 的 /chat/completions）</label>
     <input id="base" placeholder="https://api.deepseek.com/v1">
     <label>API Key（仅保存在本机浏览器）</label>
-    <input id="key" type="password" placeholder="sk-...">
+    <div style="display:flex;gap:6px">
+      <input id="key" type="password" placeholder="sk-..." autocomplete="new-password" autocapitalize="off" spellcheck="false" style="flex:1">
+      <button type="button" class="iconbtn" style="flex-shrink:0" onclick="TOOLS.eye('key',this)" title="显示 / 隐藏，便于核对">👁</button>
+    </div>
     <label>模型名</label>
     <input id="model" placeholder="deepseek-v4-flash">
     <div id="modelchips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
@@ -267,7 +270,10 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <label>备用接口地址</label>
     <input id="base2" placeholder="https://open.bigmodel.cn/api/paas/v4">
     <label>备用 API Key</label>
-    <input id="key2" type="password" placeholder="sk-...">
+    <div style="display:flex;gap:6px">
+      <input id="key2" type="password" placeholder="sk-..." autocomplete="new-password" autocapitalize="off" spellcheck="false" style="flex:1">
+      <button type="button" class="iconbtn" style="flex-shrink:0" onclick="TOOLS.eye('key2',this)" title="显示 / 隐藏">👁</button>
+    </div>
     <label>备用模型名</label>
     <input id="model2" placeholder="glm-4.7">
     <div class="hint">填好备用端点后，底部「🔁 换端点重问」可把同一问题发到另一家服务商——各家尺度不同，此路不通走彼路。备用 Key 与主链路同样只存本机浏览器。</div>
@@ -290,7 +296,10 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <label>图像生成接口（可选，OpenAI 兼容的 /images/generations）</label>
     <input id="ibase" placeholder="https://open.bigmodel.cn/api/paas/v4">
     <label>图像生成 Key</label>
-    <input id="ikey" type="password" placeholder="sk-...">
+    <div style="display:flex;gap:6px">
+      <input id="ikey" type="password" placeholder="sk-..." autocomplete="new-password" autocapitalize="off" spellcheck="false" style="flex:1">
+      <button type="button" class="iconbtn" style="flex-shrink:0" onclick="TOOLS.eye('ikey',this)" title="显示 / 隐藏">👁</button>
+    </div>
     <label>图像生成模型</label>
     <input id="imodel" placeholder="cogview-3-flash">
     <div class="hint">填好后底部「🎨 AI 绘图」可用。<b>注意</b>：AI 绘图不读文库，只是按描述作画；要严格依据教材内容的图，请用回答下方的「🧩 生成示意图」（它读的是文库原文）。</div>
@@ -1278,8 +1287,15 @@ ${txt.slice(0, 6000)}`;
     ask({ q: `请就下面这段内容整理记忆大纲。\n\n${t.slice(0, 4000)}`, mode:"outline" });
   },
 
-  load(src){
-    return new Promise((res, rej)=>{
+  /* 显示 / 隐藏密钥框，便于核对有没有粘错东西 */
+  eye(id, btn){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.type = el.type === "password" ? "text" : "password";
+    if(btn) btn.style.color = el.type === "text" ? "var(--teal)" : "";
+  },
+
+  load(src){    return new Promise((res, rej)=>{
       if([...document.scripts].some(s=>s.src === src)) return res();
       const s = document.createElement("script");
       s.src = src; s.onload = ()=>res(); s.onerror = ()=>rej(new Error("脚本加载失败：" + src.split("/").pop()));
@@ -1842,6 +1858,18 @@ async function clearLocal(){
   location.reload();
 }
 async function saveSet(){
+  /* 保存前做一次「填错栏」体检 —— 最常见的错误是把网址粘进 Key、把密钥粘进接口地址 */
+  const _k = document.getElementById("key").value.trim();
+  const _k2 = document.getElementById("key2").value.trim();
+  const _base = document.getElementById("base").value.trim();
+  for(const [name, v] of [["API Key", _k], ["备用 API Key", _k2]]){
+    if(v && (/^https?:\/\//i.test(v) || /\/$/.test(v))){
+      if(!confirm(`⚠ 「${name}」里填的内容是：\n\n${v.slice(0,90)}\n\n这看起来是网址而不是密钥。API Key 一般以 sk- 开头。\n\n仍然保存吗？（建议先改成正确的 Key）`)) return;
+    }
+  }
+  if(_base && /^sk-/i.test(_base)){
+    if(!confirm(`⚠ 「接口地址」里填的像是密钥：\n\n${_base.slice(0,60)}\n\n接口地址应形如 https://api.deepseek.com/v1\n\n仍然保存吗？`)) return;
+  }
   localStorage.setItem("sz1_base", document.getElementById("base").value.trim());
   localStorage.setItem("sz1_key",  document.getElementById("key").value.trim());
   localStorage.setItem("sz1_model",document.getElementById("model").value.trim());
