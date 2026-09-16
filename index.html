@@ -6,6 +6,16 @@
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 <meta name="referrer" content="no-referrer">
 <title>蛇杖一号 · 文库问答</title>
+<!-- PWA：可安装到桌面 / 手机主屏 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e1518">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta name="application-name" content="蛇杖一号">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="蛇杖一号">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --bg:#0e1518; --bg2:#151f23; --card:#19252a; --line:#2b3b41;
@@ -1967,6 +1977,22 @@ document.querySelectorAll("#vchips .chip").forEach(c=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener("input", ()=>{ localStorage.setItem("sz1_"+id, el.value); applyFont(); });
 });
+
+/* ============ PWA：注册 Service Worker + 快捷方式参数 ============ */
+(function(){
+  const secure = location.protocol === "https:" ||
+                 ["localhost","127.0.0.1"].indexOf(location.hostname) >= 0;
+  if("serviceWorker" in navigator && secure){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{ /* 注册失败不影响使用 */ });
+    });
+  }
+  /* 桌面 / 主屏快捷方式：./?m=quiz 或 ./?m=outline 打开即进入对应模式 */
+  try{
+    const m = new URLSearchParams(location.search).get("m");
+    if(m === "quiz" || m === "outline"){ _mode = m; setModeTag(); }
+  }catch(e){}
+})();
 
 /* ============ 启动（放在最后：此时 SS / MEM / 各函数均已就绪）============ */
 SS.load();

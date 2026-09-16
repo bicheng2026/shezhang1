@@ -1,0 +1,25 @@
+{
+  "name": "蛇杖一号 · 临床医学原文知识库",
+  "short_name": "蛇杖一号",
+  "description": "临床医学教材原文文库，正文加密存储，仅供本人学习使用。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "id": "/shezhang1/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0e1518",
+  "theme_color": "#0e1518",
+  "categories": ["education", "medical", "books"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "出题练习", "short_name": "出题", "url": "./?m=quiz", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "记忆大纲", "short_name": "大纲", "url": "./?m=outline", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}
