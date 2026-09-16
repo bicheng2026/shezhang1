@@ -152,7 +152,7 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
   <div class="box">
     <h1>蛇 杖 一 号</h1>
     <p id="downmsg">本站维护中，暂时停用。</p>
-    <p class="by">本工具由主理人主公出品</p>
+    <p class="by">本工具由江德胜出品</p>
   </div>
 </div>
 <div id="lock">
@@ -190,6 +190,7 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
       <button class="thinkbtn" style="margin:0" onclick="document.getElementById('filein').click()">📎 上传</button>
       <button id="netbtn" class="thinkbtn" style="margin:0" onclick="openNet()">🌐 联网：关</button>
       <button id="thinkbtn" class="thinkbtn" style="margin:0" onclick="toggleThink()" title="开启后模型会先推理再作答；设置面板里也有开关">💭 深度思考：关</button>
+      <button class="thinkbtn" style="margin:0" onclick="openCampus()" title="打开学校官方门户 / WebVPN（本页不收集任何账号密码）">🏫 校内</button>
       <span id="modetag" style="display:none;font-size:12px;color:var(--teal);border:1px solid var(--teal);border-radius:20px;padding:5px 11px;cursor:pointer" onclick="askMode('')" title="点击退出"></span>
     </div>
     <div id="attbar" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
@@ -294,6 +295,11 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <input id="mdlthink" placeholder="留空 = 沿用当前模型">
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <div style="font-size:13px;color:var(--teal);margin:0 0 4px">识图 / 示意图 / 绘图</div>
+    <label style="display:flex;align-items:flex-start;gap:8px;color:var(--ink);margin:10px 0 2px">
+      <input type="checkbox" id="samekey" onchange="applySameKey()" style="width:auto;flex-shrink:0;margin-top:4px">
+      <span>识图 / 生图 使用同一个接口与 Key<br>
+        <span style="color:var(--dim);font-size:11.5px">勾选后，下面的「图像生成接口」与「Key」自动复用上面的主接口与主 Key，不用重复填</span></span>
+    </label>
     <label>识图模型（可选，传图时自动改用；留空则用上面的模型）</label>
     <input id="vmodel" placeholder="如 glm-4v-flash、qwen-vl-plus、gpt-4o-mini">
     <div id="vchips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
@@ -316,6 +322,14 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <label>图像生成模型</label>
     <input id="imodel" placeholder="cogview-3-flash">
     <div class="hint">填好后底部「🎨 AI 绘图」可用。<b>注意</b>：AI 绘图不读文库，只是按描述作画；要严格依据教材内容的图，请用回答下方的「🧩 生成示意图」（它读的是文库原文）。</div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <div style="font-size:13px;color:var(--teal);margin:0 0 4px">校内入口</div>
+    <label>学校内网入口网址</label>
+    <input id="campus" placeholder="https://www.gxmu.edu.cn/">
+    <div class="hint" style="line-height:1.8">
+      点底部「🏫 校内」时用新标签打开这个地址（默认学校官网，可改成 WebVPN 或教务系统）。<br>
+      <b style="color:#d99a7a">本页不收集、也不需要你的学号与密码</b> —— 校外访问内网请使用学校官方的 VPN / WebVPN 登录，那才是正确且安全的方式。
+    </div>
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <label>修改访问密码（留空则保持原密码）</label>
     <input id="npw" type="password" placeholder="新密码">
@@ -340,10 +354,10 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <div class="hint" style="margin-top:6px">仅清除你当前这台设备的数据（密码、API Key、会话），不影响他人。清除后需重新输入密码与 Key。</div>
     <div style="margin-top:16px;font-size:11.5px;color:var(--dim);line-height:1.9">
       <b style="color:var(--teal)">关于蛇杖一号</b><br>
-      主理人：主公 · 出品<br>
+      主理人：江德胜 · 出品<br>
       文库：临床医学教材原文与课程资料（版权归原出版社，仅作个人学习使用）<br>
       本工具输出仅供学习与思路参考，<b>不构成任何诊疗意见</b>；身体不适请就医。<br>
-      本页面工具著作权归主理人所有，转载请保留署名。
+      本页面工具著作权归江德胜所有，转载请保留署名。
     </div>
   </div>
 </div>
@@ -763,7 +777,12 @@ async function ask(opt){
   }
   for(const h of hits) push(h.d, h.i, h.ti||h.d.t);
   // ③ 取正文（并发）
-  const picked = cands.slice(0, 6);
+  let picked = cands.slice(0, mode === "quiz" ? 10 : 6);
+  if(mode === "quiz"){
+    /* 出题练习：把题库 / 课后习题 / 历年试题类文献优先排到前面 */
+    const isBank = d => /题库|试题|习题|期考|真题|答案|测验|自测|练习|作业/.test((d.t || "") + (d.f || ""));
+    picked = picked.slice().sort((a, b) => (isBank(b.d) ? 1 : 0) - (isBank(a.d) ? 1 : 0)).slice(0, 6);
+  }
   const waitBub = paintMsg({who:"蛇杖一号", cls:"sys",
     html:"正在检索文库原文…", text:"正在检索文库原文…"});
   const cap = (p, ms) => Promise.race([p, new Promise(r=>setTimeout(()=>r(null), ms))]);
@@ -970,6 +989,32 @@ function applyThink(){
   if(b){ b.classList.toggle("on", on); b.textContent = "💭 深度思考：" + (on ? "开" : "关"); }
 }
 /* 深度思考的开关函数见上方 setThink / toggleThink */
+
+/* ============ 识图 / 生图共用同一套接口与 Key ============ */
+function sameKeyOn(){ return localStorage.getItem("sz1_samekey") === "1"; }
+function applySameKey(){
+  const cb = document.getElementById("samekey");
+  const on = cb ? cb.checked : sameKeyOn();
+  if(cb) localStorage.setItem("sz1_samekey", on ? "1" : "0");
+  ["ibase", "ikey"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.disabled = on; el.style.opacity = on ? ".45" : "1"; }
+  });
+}
+/* 取「绘图用的接口与 Key」：勾了就复用主接口，否则用单独填的 */
+function imageCfg(){
+  const c = cfgOf("pri");
+  if(sameKeyOn()) return { base: c.base, key: c.key };
+  return {
+    base: (localStorage.getItem("sz1_ibase") || "").replace(/\/$/, ""),
+    key:  localStorage.getItem("sz1_ikey") || ""
+  };
+}
+/* ============ 校内入口：只做跳转，绝不收集任何凭据 ============ */
+function openCampus(){
+  const u = (localStorage.getItem("sz1_campus") || "").trim() || "https://www.gxmu.edu.cn/";
+  window.open(u, "_blank", "noopener");
+}
 const _typers = new WeakMap();
 function typeInto(el, text, rate){
   let st=_typers.get(el);
@@ -995,13 +1040,19 @@ function typeInto(el, text, rate){
 const MODE_PROMPT = {
   qa: "",
   quiz: `【本轮任务：出题练习】
-请依据上面【原文】出一套练习题，要求：
+取材顺序（重要）：**先找现成的题，再自己命题**。
+第一步，看上面【原文】里有没有现成的题目 —— 题库、课后习题、历年试题、章节测验、自测题都算；
+有现成的就优先采用（允许做少量改写、换选项、合并小问）。
+第二步，只有原文里确实没有现成题的考点，才由你命制新题。
+
+其它要求：
 （一）8～12 题，覆盖原文主要考点，由易到难。
 （二）题型搭配：单选题、多选题、填空题、名词解释、简答题；原文有临床素材时必出 1 道病例分析题。
 （三）每题都要能在【原文】里找到依据。题干后不要写答案，全部答案与解析统一放在末尾「【参考答案与解析】」。
 （四）解析要写清为什么对、为什么错，并标出依据的原文编号〔n〕。
-（五）原文没讲到的不要出题；重要考点但本册未覆盖的，在末尾用一行列出「本册未覆盖：…」。
-（六）不要出现任何身份设定或称呼，直接开题。`,
+（五）**每题末尾用括号注明来源**，三选一：（来源：教材课后习题）/（来源：题库 · 章节名）/（来源：自拟）。
+（六）原文没讲到的不要出题；重要考点但本册未覆盖的，在末尾用一行列出「本册未覆盖：…」。
+（七）不要出现任何身份设定或称呼，直接开题。`,
   outline: `【本轮任务：记忆大纲】
 请依据上面【原文】整理一份便于背诵的复习大纲，要求：
 （一）按「篇—章—节—要点」分级编号（一、（一）1. ①），层级清晰。
@@ -1269,10 +1320,14 @@ ${txt.slice(0, 6000)}`;
   /* ---- 可选：AI 绘图（需在设置里填图像生成接口）---- */
   async drawText(q){
     if(!q){ addMsg("系统", "用法：<b>/draw 要画的内容</b>，例如 <b>/draw 心脏传导系统示意图</b>", "sys"); return; }
-    const base = (localStorage.getItem("sz1_ibase")||"").replace(/\/$/,"");
-    const key  = localStorage.getItem("sz1_ikey")||"";
+    const ic = imageCfg();
+    const base = ic.base, key = ic.key;
     const mdl  = localStorage.getItem("sz1_imodel")||"cogview-3-flash";
-    if(!base || !key){ openSet(); addMsg("系统", "🎨 绘图需要先在「设置 → 图像生成接口」里填接口地址与 Key。", "sys"); return; }
+    if(!base || !key){
+      openSet();
+      addMsg("系统", "🎨 绘图需要接口与 Key：可在「设置 → 识图 / 示意图 / 绘图」里单独填，或勾选「识图 / 生图 使用同一个接口与 Key」直接复用主接口。", "sys");
+      return;
+    }
     const bub = addMsg("蛇杖一号", "正在绘制…", "sys");
     try{
       const r = await fetch(base + "/images/generations", {
@@ -1918,6 +1973,9 @@ function openSet(){
   document.getElementById("ibase").value = localStorage.getItem("sz1_ibase")||"";
   document.getElementById("ikey").value  = localStorage.getItem("sz1_ikey")||"";
   document.getElementById("imodel").value= localStorage.getItem("sz1_imodel")||"";
+  document.getElementById("samekey").checked = sameKeyOn();
+  document.getElementById("campus").value = localStorage.getItem("sz1_campus")||"";
+  applySameKey();
   document.getElementById("npw").value = "";
   document.getElementById("qfs").value = localStorage.getItem("sz1_qfs")||"15";
   document.getElementById("qcolor").value = localStorage.getItem("sz1_qcolor")||"#e3eef0";
@@ -1959,6 +2017,8 @@ async function saveSet(){
   localStorage.setItem("sz1_ibase", document.getElementById("ibase").value.trim());
   localStorage.setItem("sz1_ikey",  document.getElementById("ikey").value.trim());
   localStorage.setItem("sz1_imodel",document.getElementById("imodel").value.trim());
+  localStorage.setItem("sz1_samekey", document.getElementById("samekey").checked ? "1" : "0");
+  localStorage.setItem("sz1_campus", document.getElementById("campus").value.trim());
   localStorage.setItem("sz1_qfs", document.getElementById("qfs").value);
   localStorage.setItem("sz1_qcolor", document.getElementById("qcolor").value);
   localStorage.setItem("sz1_afs", document.getElementById("afs").value);
