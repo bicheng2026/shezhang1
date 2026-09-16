@@ -190,7 +190,6 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
       <button class="thinkbtn" style="margin:0" onclick="document.getElementById('filein').click()">📎 上传</button>
       <button id="netbtn" class="thinkbtn" style="margin:0" onclick="openNet()">🌐 联网：关</button>
       <button id="thinkbtn" class="thinkbtn" style="margin:0" onclick="toggleThink()" title="开启后模型会先推理再作答；设置面板里也有开关">💭 深度思考：关</button>
-      <button class="thinkbtn" style="margin:0" onclick="openCampus()" title="打开学校官方门户 / WebVPN（本页不收集任何账号密码）">🏫 校内</button>
       <span id="modetag" style="display:none;font-size:12px;color:var(--teal);border:1px solid var(--teal);border-radius:20px;padding:5px 11px;cursor:pointer" onclick="askMode('')" title="点击退出"></span>
     </div>
     <div id="attbar" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
@@ -323,14 +322,6 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <input id="imodel" placeholder="cogview-3-flash">
     <div class="hint">填好后底部「🎨 AI 绘图」可用。<b>注意</b>：AI 绘图不读文库，只是按描述作画；要严格依据教材内容的图，请用回答下方的「🧩 生成示意图」（它读的是文库原文）。</div>
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
-    <div style="font-size:13px;color:var(--teal);margin:0 0 4px">校内入口</div>
-    <label>学校内网入口网址</label>
-    <input id="campus" placeholder="https://www.gxmu.edu.cn/">
-    <div class="hint" style="line-height:1.8">
-      点底部「🏫 校内」时用新标签打开这个地址（默认学校官网，可改成 WebVPN 或教务系统）。<br>
-      <b style="color:#d99a7a">本页不收集、也不需要你的学号与密码</b> —— 校外访问内网请使用学校官方的 VPN / WebVPN 登录，那才是正确且安全的方式。
-    </div>
-    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <label>修改访问密码（留空则保持原密码）</label>
     <input id="npw" type="password" placeholder="新密码">
     <button class="btn" onclick="saveSet()">保存</button>
@@ -364,7 +355,7 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
 
 <script>
 /* ============ 配置 ============ */
-const DEFAULT_PW_HASH = "bc15805ac94a27aaf3f39f5dd65eb75c72eda6fb4948138d23d0efb1c34bedc3"; // shezhang2026
+const DEFAULT_PW_HASH = "b4217f44f263ff7902be23585e51381d5d80a4d4794a9cedb7df2d17f4d9de77"; // shezhangyihao
 const IDX = "data/index.json", LIBP = "lib/";
 /* ---- 文库正文加密（AES-256-CTR）：线上只存密文，密文与明文等长，
        所以索引里的字节偏移、Range 取文逻辑完全不变，只在读出来后加一步解密。 ---- */
@@ -1010,11 +1001,7 @@ function imageCfg(){
     key:  localStorage.getItem("sz1_ikey") || ""
   };
 }
-/* ============ 校内入口：只做跳转，绝不收集任何凭据 ============ */
-function openCampus(){
-  const u = (localStorage.getItem("sz1_campus") || "").trim() || "https://www.gxmu.edu.cn/";
-  window.open(u, "_blank", "noopener");
-}
+/* ============ 校内入口：已移除（连着校园网时本来就能访问内网）============ */
 const _typers = new WeakMap();
 function typeInto(el, text, rate){
   let st=_typers.get(el);
@@ -1974,7 +1961,6 @@ function openSet(){
   document.getElementById("ikey").value  = localStorage.getItem("sz1_ikey")||"";
   document.getElementById("imodel").value= localStorage.getItem("sz1_imodel")||"";
   document.getElementById("samekey").checked = sameKeyOn();
-  document.getElementById("campus").value = localStorage.getItem("sz1_campus")||"";
   applySameKey();
   document.getElementById("npw").value = "";
   document.getElementById("qfs").value = localStorage.getItem("sz1_qfs")||"15";
@@ -2018,7 +2004,6 @@ async function saveSet(){
   localStorage.setItem("sz1_ikey",  document.getElementById("ikey").value.trim());
   localStorage.setItem("sz1_imodel",document.getElementById("imodel").value.trim());
   localStorage.setItem("sz1_samekey", document.getElementById("samekey").checked ? "1" : "0");
-  localStorage.setItem("sz1_campus", document.getElementById("campus").value.trim());
   localStorage.setItem("sz1_qfs", document.getElementById("qfs").value);
   localStorage.setItem("sz1_qcolor", document.getElementById("qcolor").value);
   localStorage.setItem("sz1_afs", document.getElementById("afs").value);
