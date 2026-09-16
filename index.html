@@ -294,33 +294,33 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
     <input id="mdlthink" placeholder="留空 = 沿用当前模型">
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <div style="font-size:13px;color:var(--teal);margin:0 0 4px">识图 / 示意图 / 绘图</div>
-    <label style="display:flex;align-items:flex-start;gap:8px;color:var(--ink);margin:10px 0 2px">
-      <input type="checkbox" id="samekey" onchange="applySameKey()" style="width:auto;flex-shrink:0;margin-top:4px">
-      <span>识图 / 生图 使用同一个接口与 Key<br>
-        <span style="color:var(--dim);font-size:11.5px">勾选后，下面的「图像生成接口」与「Key」自动复用上面的主接口与主 Key，不用重复填</span></span>
-    </label>
-    <label>识图模型（可选，传图时自动改用；留空则用上面的模型）</label>
-    <input id="vmodel" placeholder="如 glm-4v-flash、qwen-vl-plus、gpt-4o-mini">
-    <div id="vchips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-      <span class="chip" data-v="glm-4v-flash">glm-4v-flash</span>
-      <span class="chip" data-v="glm-4.1v-thinking-flash">glm-4.1v-thinking-flash</span>
-      <span class="chip" data-v="qwen-vl-plus">qwen-vl-plus</span>
-      <span class="chip" data-v="gpt-4o-mini">gpt-4o-mini</span>
+    <div class="hint" style="margin:0 0 12px;line-height:1.8">
+      识图和生图<b>共用下面这一套接口</b>，只是模型名不同 —— 例如都走千问，识图用 VL 模型、生图用 image 模型。<br>
+      <b>留空则自动用上面的主接口与主 Key</b>。所以主模型用 deepseek、识图/生图用千问，互不影响。
     </div>
-    <div class="hint">需要该模型支持图片输入（OpenAI 的 image_url 格式）。传图后自动切换到它。</div>
-    <label>示意图模型（可选，留空则沿用上面模型）</label>
-    <input id="dmodel" placeholder="留空 = 沿用当前模型">
-    <div class="hint">「生成示意图」会要求模型输出 SVG 矢量图，代码能力强的模型效果更好。</div>
-    <label>图像生成接口（可选，OpenAI 兼容的 /images/generations）</label>
-    <input id="ibase" placeholder="https://open.bigmodel.cn/api/paas/v4">
-    <label>图像生成 Key</label>
+    <label>多模态接口地址（识图与生图共用）</label>
+    <input id="ibase" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1">
+    <label>多模态 API Key（识图与生图共用）</label>
     <div style="display:flex;gap:6px">
       <input id="ikey" type="password" placeholder="sk-..." autocomplete="new-password" autocapitalize="off" spellcheck="false" style="flex:1">
       <button type="button" class="iconbtn" style="flex-shrink:0" onclick="TOOLS.eye('ikey',this)" title="显示 / 隐藏">👁</button>
     </div>
-    <label>图像生成模型</label>
-    <input id="imodel" placeholder="cogview-3-flash">
-    <div class="hint">填好后底部「🎨 AI 绘图」可用。<b>注意</b>：AI 绘图不读文库，只是按描述作画；要严格依据教材内容的图，请用回答下方的「🧩 生成示意图」（它读的是文库原文）。</div>
+    <label>识图模型（传图时自动用它；留空则用主模型）</label>
+    <input id="vmodel" placeholder="如 qwen3-vl-plus、glm-4v-flash、gpt-4o-mini">
+    <div id="vchips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+      <span class="chip" data-v="qwen3-vl-plus">qwen3-vl-plus</span>
+      <span class="chip" data-v="qwen-vl-plus">qwen-vl-plus</span>
+      <span class="chip" data-v="glm-4v-flash">glm-4v-flash</span>
+      <span class="chip" data-v="glm-4.1v-thinking-flash">glm-4.1v-thinking-flash</span>
+      <span class="chip" data-v="gpt-4o-mini">gpt-4o-mini</span>
+    </div>
+    <div class="hint">需要该模型支持图片输入（OpenAI 的 image_url 格式）。传图后自动切换到它。</div>
+    <label>生图模型（/draw 与「AI 绘图」用它）</label>
+    <input id="imodel" placeholder="如 qwen-image-2、cogview-3-flash">
+    <div class="hint">AI 绘图不读文库，只是按描述作画；要严格依据教材内容的图，请用回答下方的「🧩 生成示意图」（它读的是文库原文）。</div>
+    <label>示意图模型（可选，留空则沿用主模型）</label>
+    <input id="dmodel" placeholder="留空 = 沿用当前模型">
+    <div class="hint">「生成示意图」会要求模型输出 SVG 矢量图，代码能力强的模型效果更好。</div>
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <label>修改访问密码（留空则保持原密码）</label>
     <input id="npw" type="password" placeholder="新密码">
@@ -733,12 +733,14 @@ async function ask(opt){
   }
   const fileTxt = atts.filter(a=>a.kind!=="image" && a.text)
                       .map(a=>`〔附件：${a.name}〕\n${a.text}`).join("\n\n").slice(0,30000);
-  let visMdl = mdl;
-  if(imgs.length){                     /* 识图：改用视觉模型 */
+  let visMdl = mdl, visCfg = cfg;
+  if(imgs.length){                     /* 识图：改用多模态接口 + 视觉模型 */
     const vm = (localStorage.getItem("sz1_vmodel")||"").trim();
+    const ic = imageCfg();
+    if(vm || ic.own) visCfg = { base: ic.base, key: ic.key };
     if(vm) visMdl = vm;
     else if(!opt._warned){
-      addMsg("系统", `📎 已附加 ${imgs.length} 张图片。当前模型「${mdl}」若不支持图片输入会报错 —— 可在「设置 → 识图模型」里填一个视觉模型（如 glm-4v-flash）。`, "sys");
+      addMsg("系统", `📎 已附加 ${imgs.length} 张图片。当前模型「${mdl}」若不支持图片输入会报错 —— 可在「设置 → 识图模型」里填一个视觉模型（如 qwen3-vl-plus）。`, "sys");
     }
   }
   if(opt.q == null){ el.value = ""; el.style.height = "auto"; }
@@ -866,9 +868,9 @@ async function ask(opt){
       ? [{type:"text", text:userText}].concat(
           imgs.map(a=>({type:"image_url", image_url:{url:a.data}})))
       : userText;
-    const r = await fetch(cfg.base + "/chat/completions", {
+    const r = await fetch(visCfg.base + "/chat/completions", {
       method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.key},
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+visCfg.key},
       body: JSON.stringify(Object.assign({model:visMdl, stream:true, temperature:0.7,
         messages:[{role:"system",content:sys},{role:"user",content:userContent}]},
         think ? {thinking:{type:"enabled"}, reasoning_effort:"high"} : {thinking:{type:"disabled"}}))
@@ -988,25 +990,13 @@ function applyThink(){
 }
 /* 深度思考的开关函数见上方 setThink / toggleThink */
 
-/* ============ 识图 / 生图共用同一套接口与 Key ============ */
-function sameKeyOn(){ return localStorage.getItem("sz1_samekey") === "1"; }
-function applySameKey(){
-  const cb = document.getElementById("samekey");
-  const on = cb ? cb.checked : sameKeyOn();
-  if(cb) localStorage.setItem("sz1_samekey", on ? "1" : "0");
-  ["ibase", "ikey"].forEach(id => {
-    const el = document.getElementById(id);
-    if(el){ el.disabled = on; el.style.opacity = on ? ".45" : "1"; }
-  });
-}
-/* 取「绘图用的接口与 Key」：勾了就复用主接口，否则用单独填的 */
+/* 多模态配置：识图与生图共用同一套接口，只换模型名；
+   接口地址或 Key 留空 → 自动回退到主接口与主 Key */
 function imageCfg(){
   const c = cfgOf("pri");
-  if(sameKeyOn()) return { base: c.base, key: c.key };
-  return {
-    base: (localStorage.getItem("sz1_ibase") || "").replace(/\/$/, ""),
-    key:  localStorage.getItem("sz1_ikey") || ""
-  };
+  const base = (localStorage.getItem("sz1_ibase") || "").trim().replace(/\/$/, "");
+  const key  = (localStorage.getItem("sz1_ikey") || "").trim();
+  return { base: base || c.base, key: key || c.key, own: !!(base || key) };
 }
 /* ============ 校内入口：已移除（连着校园网时本来就能访问内网）============ */
 const _typers = new WeakMap();
@@ -2010,8 +2000,6 @@ function openSet(){
   document.getElementById("ibase").value = localStorage.getItem("sz1_ibase")||"";
   document.getElementById("ikey").value  = localStorage.getItem("sz1_ikey")||"";
   document.getElementById("imodel").value= localStorage.getItem("sz1_imodel")||"";
-  document.getElementById("samekey").checked = sameKeyOn();
-  applySameKey();
   document.getElementById("npw").value = "";
   document.getElementById("qfs").value = localStorage.getItem("sz1_qfs")||"15";
   document.getElementById("qcolor").value = localStorage.getItem("sz1_qcolor")||"#e3eef0";
@@ -2053,7 +2041,6 @@ async function saveSet(){
   localStorage.setItem("sz1_ibase", document.getElementById("ibase").value.trim());
   localStorage.setItem("sz1_ikey",  document.getElementById("ikey").value.trim());
   localStorage.setItem("sz1_imodel",document.getElementById("imodel").value.trim());
-  localStorage.setItem("sz1_samekey", document.getElementById("samekey").checked ? "1" : "0");
   localStorage.setItem("sz1_qfs", document.getElementById("qfs").value);
   localStorage.setItem("sz1_qcolor", document.getElementById("qcolor").value);
   localStorage.setItem("sz1_afs", document.getElementById("afs").value);
