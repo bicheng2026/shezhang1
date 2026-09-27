@@ -2,7 +2,7 @@
    策略：只缓存「应用外壳」（页面 + 图标），文库密文与索引一律走网络。
    —— 文库 105 MB 且是密文，缓存下来既占手机空间又没意义；壳缓存好就能离线打开界面。 */
 
-const CACHE = "sz1-shell-v2";
+const CACHE = "sz1-shell-v3";
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./icon-192.png", "./icon-512.png", "./icon-180.png", "./icon-32.png"
