@@ -1,9 +1,169 @@
 {
- "updated_at": "2026-09-30 01:05:55",
- "count": 12,
+ "updated_at": "2026-09-30 01:51:24",
+ "count": 32,
  "include_qq": false,
  "note": "仅官网/图书馆公告，QQ群待办只在本机看板可见",
  "items": [
+  {
+   "id": 104,
+   "level": "P2",
+   "title": "关于调整基础医学院本科教学督导组成员的通知",
+   "ddl": "",
+   "src": "基础医学院通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科",
+   "url": "https://jc.gxmu.edu.cn/jc2019xywj/t199547.html",
+   "ts": 1790704180
+  },
+  {
+   "id": 81,
+   "level": "P2",
+   "title": "关于做好2026年秋季学期本科补考（缓考）课程信息核对工作的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知/补考/核对；命中画像词：本科/补考/缓考",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t238521.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 82,
+   "level": "P2",
+   "title": "关于我校2026年中国国际大学生创新大赛申报工作的补充通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：创新大赛",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t238466.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 83,
+   "level": "P2",
+   "title": "关于做好2025-2026学年下学期本科期末考试成绩提交工作的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知/提交；命中画像词：本科/考试",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236981.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 84,
+   "level": "P2",
+   "title": "关于2025-2026学年下学期本科重修考试的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知/重修；命中画像词：本科/重修/考试",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236531.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 85,
+   "level": "P2",
+   "title": "关于2025-2026学年下学期本科期考日程发布的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236528.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 86,
+   "level": "P2",
+   "title": "关于办理2025-2026学年下学期本科课程缓考手续的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科/缓考",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236478.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 87,
+   "level": "P2",
+   "title": "关于加强2026年春季学期期末考试工作的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：考试",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236393.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 88,
+   "level": "P2",
+   "title": "关于领取2026年3月份普通话水平测试等级证书的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：普通话",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t236014.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 89,
+   "level": "P2",
+   "title": "关于本科生学生证补办事宜的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科/本科生/学生证",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t235321.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 90,
+   "level": "P2",
+   "title": "关于做好2026年6月全国大学英语四、六级和高校英语应用能力B级考前准备工作的通…",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：六级",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t235100.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 91,
+   "level": "P2",
+   "title": "关于2026年5月学士学位英语考试的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：考试/学位英语",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t233978.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 92,
+   "level": "P2",
+   "title": "关于下达广西医科大学2026—2027学年上学期本科教学任务书（征求意见稿）的通…",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t233509.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 93,
+   "level": "P2",
+   "title": "关于2026年5月份普通本科学位英语考试报名的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知/报名；命中画像词：本科/考试/学位英语",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t233135.html",
+   "ts": 1790703665
+  },
+  {
+   "id": 79,
+   "level": "P2",
+   "title": "关于广西医科大学2026年本科生转专业名单的公示",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：公示；命中画像词：本科/本科生/转专业",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t240014.html",
+   "ts": 1790703664
+  },
+  {
+   "id": 80,
+   "level": "P2",
+   "title": "关于做好我校2026年度普通高等教育本科生转专业工作的通知",
+   "ddl": "",
+   "src": "教务处通知",
+   "reason": "命中一般事务词：通知；命中画像词：本科/本科生/转专业",
+   "url": "https://jwc.gxmu.edu.cn/jwxx/jwtz/t238868.html",
+   "ts": 1790703664
+  },
   {
    "id": 50,
    "level": "P2",
@@ -11,6 +171,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知；命中画像词：假期",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239408.html",
    "ts": 1790699663
   },
   {
@@ -20,6 +181,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知/补考；命中画像词：补考",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239274.html",
    "ts": 1790699663
   },
   {
@@ -29,6 +191,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知/报名/重修；命中画像词：本科/重修/补修",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239161.html",
    "ts": 1790699663
   },
   {
@@ -38,6 +201,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知/上交；命中画像词：本科/班级",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239048.html",
    "ts": 1790699663
   },
   {
@@ -47,6 +211,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知/选课；命中画像词：本科/本科生/选课",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t238988.html",
    "ts": 1790699663
   },
   {
@@ -56,6 +221,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知/补考；命中画像词：本科/补考/考试",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t238664.html",
    "ts": 1790699663
   },
   {
@@ -65,6 +231,7 @@
    "ddl": "",
    "src": "图书馆通知公告",
    "reason": "命中一般事务词：通知；命中画像词：假期",
+   "url": "https://lib.gxmu.edu.cn/tzgg_3345/t239808.html",
    "ts": 1790699663
   },
   {
@@ -74,6 +241,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知；命中画像词：普通话",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239639.html",
    "ts": 1790699662
   },
   {
@@ -83,6 +251,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知；命中画像词：普通话",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239636.html",
    "ts": 1790699662
   },
   {
@@ -92,6 +261,7 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知；命中画像词：本科",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239458.html",
    "ts": 1790699662
   },
   {
@@ -101,7 +271,38 @@
    "ddl": "",
    "src": "内网张贴",
    "reason": "命中一般事务词：通知；命中画像词：本科",
+   "url": "https://www.gxmu.edu.cn/xwgk/nwtz/t239412.html",
    "ts": 1790699662
+  },
+  {
+   "id": 6,
+   "level": "P2",
+   "title": "关于公布广西高校区域性疾病基础研究重点实验室2026年度开放课题立项的通知",
+   "ddl": "",
+   "src": "学校通知公告",
+   "reason": "命中一般事务词：通知/实验；命中画像词：立项/课题",
+   "url": "https://www.gxmu.edu.cn/xwgk/wwtz/t239496.html",
+   "ts": 1790699661
+  },
+  {
+   "id": 8,
+   "level": "P2",
+   "title": "关于公布广西高校生物分子医学研究重点实验室2026年度开放课题拟资助项目的通知",
+   "ddl": "",
+   "src": "学校通知公告",
+   "reason": "命中一般事务词：通知/实验；命中画像词：课题",
+   "url": "https://www.gxmu.edu.cn/xwgk/wwtz/t239414.html",
+   "ts": 1790699661
+  },
+  {
+   "id": 9,
+   "level": "P2",
+   "title": "关于公布医学生物智造先进技术广西高校工程研究中心2026年度开放课题立项的通知",
+   "ddl": "",
+   "src": "学校通知公告",
+   "reason": "命中一般事务词：通知；命中画像词：立项/课题",
+   "url": "https://www.gxmu.edu.cn/xwgk/wwtz/t239387.html",
+   "ts": 1790699661
   },
   {
    "id": 11,
@@ -110,6 +311,17 @@
    "ddl": "",
    "src": "学校通知公告",
    "reason": "命中一般事务词：通知/报名；命中画像词：六级/考试",
+   "url": "https://www.gxmu.edu.cn/xwgk/wwtz/t239250.html",
+   "ts": 1790699661
+  },
+  {
+   "id": 16,
+   "level": "P2",
+   "title": "关于公布广西高校人体发育与疾病研究重点实验室2026年度开放课题立项的通知",
+   "ddl": "",
+   "src": "学校通知公告",
+   "reason": "命中一般事务词：通知/实验；命中画像词：立项/课题",
+   "url": "https://www.gxmu.edu.cn/xwgk/wwtz/t238592.html",
    "ts": 1790699661
   }
  ]
