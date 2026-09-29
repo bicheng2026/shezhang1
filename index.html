@@ -2426,6 +2426,134 @@ applyModel();
 applyThink();
 applyNet();
 renderNetStat();
+
+/* ============ 待办 / 官网公告 · 抽屉 ============
+   动态注入，不动原有 DOM 结构。数据来自 data/todo.json，
+   由本机 bridge 每次同步时导出（默认只含官网/图书馆公告，不含 QQ 群）。 */
+(function(){
+  var CSS = [
+    "#tododrawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);z-index:9999;",
+    "background:#fff;border-left:1px solid #e3e6ea;box-shadow:-8px 0 28px rgba(16,24,40,.12);",
+    "transform:translateX(101%);transition:transform .26s cubic-bezier(.4,0,.2,1);",
+    "display:flex;flex-direction:column;font-size:14px;color:#1f2328}",
+    "#tododrawer.open{transform:translateX(0)}",
+    "#todomask{position:fixed;inset:0;background:rgba(16,24,40,.35);z-index:9998;display:none}",
+    "#todomask.open{display:block}",
+    "#tododrawer .th{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #e3e6ea}",
+    "#tododrawer .th b{font-size:15px;font-weight:600}",
+    "#tododrawer .th .sp{flex:1}",
+    "#tododrawer .th button{border:1px solid #d5d9e0;background:#fff;border-radius:7px;",
+    "padding:4px 10px;cursor:pointer;font-size:12px;color:#475467}",
+    "#tododrawer .body{flex:1;overflow-y:auto;padding:12px 16px 24px}",
+    "#tododrawer .grp{margin:12px 0 6px;font-size:12px;color:#667085;font-weight:600}",
+    "#tododrawer .it{padding:9px 11px;border:1px solid #e3e6ea;border-radius:9px;margin-bottom:7px;background:#fcfcfd}",
+    "#tododrawer .it .t{font-weight:500;line-height:1.45}",
+    "#tododrawer .it .m{margin-top:4px;font-size:11.5px;color:#667085;display:flex;gap:10px;flex-wrap:wrap}",
+    "#tododrawer .it.P0{border-left:3px solid #d92d20}#tododrawer .it.P1{border-left:3px solid #f79009}",
+    "#tododrawer .it.P2{border-left:3px solid #eaaa08}#tododrawer .it.P3{border-left:3px solid #98a2b3}",
+    "#tododrawer .empty{text-align:center;color:#98a2b3;padding:48px 0}",
+    "#tododrawer .foot{padding:9px 16px;border-top:1px solid #e3e6ea;font-size:11px;color:#98a2b3}"
+  ].join("");
+  var st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
+
+  var mask = document.createElement("div"); mask.id = "todomask";
+  mask.onclick = function(){ closeTodoDrawer(); };
+  document.body.appendChild(mask);
+
+  var dr = document.createElement("div"); dr.id = "tododrawer";
+  dr.innerHTML =
+    '<div class="th"><b>待办 · 官网公告</b><span class="sp"></span>' +
+    '<button onclick="loadTodoDrawer(true)">刷新</button>' +
+    '<button onclick="closeTodoDrawer()">关闭</button></div>' +
+    '<div class="body" id="todobody"><div class="empty">载入中…</div></div>' +
+    '<div class="foot" id="todofoot"></div>';
+  document.body.appendChild(dr);
+
+  // 顶部按钮（插在 header 末尾）
+  var hdr = document.querySelector("#main header");
+  if(hdr){
+    var b = document.createElement("button");
+    b.className = "iconbtn"; b.title = "待办与官网公告";
+    b.innerHTML = '待办<span id="todocnt"></span>';
+    b.onclick = function(){ toggleTodoDrawer(); };
+    hdr.appendChild(b);
+  }
+
+  window.toggleTodoDrawer = function(){
+    var open = dr.classList.toggle("open");
+    mask.classList.toggle("open", open);
+    if(open) loadTodoDrawer();
+  };
+  window.closeTodoDrawer = function(){
+    dr.classList.remove("open"); mask.classList.remove("open");
+  };
+
+  var cache = null;
+  window.loadTodoDrawer = function(force){
+    var body = document.getElementById("todobody");
+    var foot = document.getElementById("todofoot");
+    if(cache && !force){ renderTodo(cache); return; }
+    body.innerHTML = '<div class="empty">载入中…</div>';
+    fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(d){ cache = d; renderTodo(d); })
+      .catch(function(e){
+        body.innerHTML = '<div class="empty">读不到待办数据。<br><br>' +
+          '<span style="font-size:12px">本机 bridge 每次同步会生成 data/todo.json。<br>' +
+          '确认已跑过 <code>python bridge.py sync</code>。<br>(' + (e.message||e) + ')</span></div>';
+        foot.textContent = "";
+      });
+  };
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function fmt(ts){ if(!ts) return ""; try{
+    return new Date(ts*1000).toLocaleDateString("zh-CN"); }catch(e){ return ""; } }
+
+  function renderTodo(d){
+    var body = document.getElementById("todobody");
+    var foot = document.getElementById("todofoot");
+    var cn = document.getElementById("todocnt");
+    var items = (d && d.items) || [];
+    if(cn) cn.textContent = items.length ? " " + items.length : "";
+    if(!items.length){
+      body.innerHTML = '<div class="empty">今天没有待办。</div>';
+      foot.textContent = (d && d.updated_at) ? "更新于 " + d.updated_at : "";
+      return;
+    }
+    var LV = ["P0","P1","P2","P3"], NM = {P0:"紧急",P1:"重要",P2:"一般",P3:"低"};
+    var html = "", n = 0;
+    LV.forEach(function(lv){
+      var g = items.filter(function(x){ return x.level === lv; });
+      if(!g.length) return;
+      html += '<div class="grp">' + lv + " · " + NM[lv] + "（" + g.length + "）</div>";
+      g.forEach(function(x){
+        n++;
+        html += '<div class="it ' + lv + '"><div class="t">' + esc(x.title) + "</div>" +
+          '<div class="m">' +
+            (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
+            "<span>来自 " + esc(x.src) + "</span>" +
+            (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
+          "</div></div>";
+      });
+    });
+    body.innerHTML = html;
+    foot.textContent = "共 " + n + " 条" +
+      (d.updated_at ? " ｜ 更新于 " + d.updated_at : "") +
+      (d.note ? " ｜ " + d.note : "");
+  }
+
+  // 启动后顺手取一次数量
+  setTimeout(function(){
+    fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        cache = d;
+        var cn = document.getElementById("todocnt");
+        if(cn && d && d.items) cn.textContent = " " + d.items.length;
+      }).catch(function(){});
+  }, 1200);
+})();
 </script>
 </body>
 </html>
