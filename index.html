@@ -2439,7 +2439,7 @@ applyThink();
 applyNet();
 renderNetStat();
 
-/* ============ 待办 / 官网公告 · 抽屉 ============
+/* ============ 信息全览 / 官网公告 · 抽屉 ============
    动态注入，不动原有 DOM 结构。数据来自 data/todo.json，
    由本机 bridge 每次同步时导出（默认只含官网/图书馆公告，不含 QQ 群）。 */
 (function(){
@@ -2516,7 +2516,7 @@ renderNetStat();
       .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function(d){ cache = d; renderTodo(d); })
       .catch(function(e){
-        body.innerHTML = '<div class="empty">读不到待办数据。<br><br>' +
+        body.innerHTML = '<div class="empty">读不到信息全览数据。<br><br>' +
           '<span style="font-size:12px">本机 bridge 每次同步会生成 data/todo.json。<br>' +
           '确认已跑过 <code>python bridge.py sync</code>。<br>(' + (e.message||e) + ')</span></div>';
         foot.textContent = "";
