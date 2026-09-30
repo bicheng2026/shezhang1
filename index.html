@@ -2272,10 +2272,12 @@ const _CAT_ORDER = ["① 教材","② 课件题库","③ 学科资料","④ 待�
 let _docsAll = [];
 function buildSidebar(){
   if(!DOCS || !DOCS.length) return;
-  _docsAll = DOCS.slice();
+  // 主公定：侧边栏只留「① 教材」的阅读入口，课件题库/学科资料/待入库等不再上侧栏。
+  // 注意只是「不显示」——DOCS 本身没动，AI 检索依旧覆盖全部资料，不影响问答取材。
+  _docsAll = DOCS.filter(d => catOf(d.f) === "① 教材");
   renderDocList(_docsAll);
   const sf = document.getElementById("sidefoot");
-  if(sf) sf.textContent = DOCS.length + " 部文献 · 离线可用";
+  if(sf) sf.textContent = _docsAll.length + " 部教材 · 离线可用";
 }
 function renderDocList(docs){
   const list = document.getElementById("doclist");
@@ -2546,9 +2548,11 @@ renderNetStat();
       });
     });
     body.innerHTML = html;
-    foot.textContent = "共 " + n + " 条" +
+    // 底部挂一个「加入日历」：点一下下载 .ics，手机导入后 DDL 进系统日历、到点提醒
+    foot.innerHTML = "共 " + n + " 条" +
       (d.updated_at ? " ｜ 更新于 " + d.updated_at : "") +
-      (d.note ? " ｜ " + d.note : "");
+      (d.note ? " ｜ " + d.note : "") +
+      ' ｜ <a href="data/todo.ics" download style="color:#1a56db;text-decoration:none">📅 加入日历</a>';
   }
 
   // 启动后顺手取一次数量

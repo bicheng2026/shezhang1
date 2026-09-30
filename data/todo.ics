@@ -1,0 +1,114 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//shezhang1//bridge//CN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:蛇杖一号 · 待办
+BEGIN:VEVENT
+UID:shezhang1-49@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260930
+DTEND;VALUE=DATE:20261001
+SUMMARY:[P0] 关于评选广西医科大学2026—2027学年“本科课堂教学质量奖”的通知
+DESCRIPTION:来源：内网张贴\n原文：https://www.gxmu.edu.cn/xwgk/nwtz/t239412.html\n依据：识别到截止日 2026-09-30；命中一般事务词：通知/提交/实验；今天到期 → 提到 P0；命中画像词：本科/见习
+URL:https://www.gxmu.edu.cn/xwgk/nwtz/t239412.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-55@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20261019
+DTEND;VALUE=DATE:20261020
+SUMMARY:[P2] 关于本科生任选课开课确认及重新申报的通知
+DESCRIPTION:来源：内网张贴\n原文：https://www.gxmu.edu.cn/xwgk/nwtz/t238988.html\n依据：识别到截止日 2026-10-19；命中一般事务词：通知/上交/选课；命中画像词：本科/本科生/选课
+URL:https://www.gxmu.edu.cn/xwgk/nwtz/t238988.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-7@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20261101
+DTEND;VALUE=DATE:20261102
+SUMMARY:[P2] 2026年第六届广西高校大学生翻译大赛和第四届广西高校大学生“讲好广西故事”译写…
+DESCRIPTION:来源：学校通知公告\n原文：https://www.gxmu.edu.cn/xwgk/wwtz/t239484.html\n依据：识别到截止日 2026-11-01；命中一般事务词：通知/报名/核对；命中画像词：本科/本科生/竞赛
+URL:https://www.gxmu.edu.cn/xwgk/wwtz/t239484.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-11@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20261212
+DTEND;VALUE=DATE:20261213
+SUMMARY:[P2] 关于做好2026年下半年全国大学英语四、六级考试和高校英语应用能力B级考试报名工…
+DESCRIPTION:来源：学校通知公告\n原文：https://www.gxmu.edu.cn/xwgk/wwtz/t239250.html\n依据：识别到截止日 2026-12-12；命中一般事务词：通知/报名；命中画像词：四级/六级/教务
+URL:https://www.gxmu.edu.cn/xwgk/wwtz/t239250.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-100@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20250107
+DTEND;VALUE=DATE:20250108
+SUMMARY:[P3] 关于做好2025年中国-东盟教育开放合作试验区项目出国人员推荐工作的通知
+DESCRIPTION:来源：基础医学院通知\n原文：https://jc.gxmu.edu.cn/jc2019xywj/t205659.html\n依据：识别到截止日 2025-01-07；命中事务词：截止；截止日已过 631 天，降级；命中画像词：本科/科研/课题
+URL:https://jc.gxmu.edu.cn/jc2019xywj/t205659.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-99@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20250115
+DTEND;VALUE=DATE:20250116
+SUMMARY:[P3] 关于做好2025年国家公派出国留学项目申报工作的通知
+DESCRIPTION:来源：基础医学院通知\n原文：https://jc.gxmu.edu.cn/jc2019xywj/t206204.html\n依据：识别到截止日 2025-01-15；命中一般事务词：通知/提交/奖学金；截止日已过 623 天，降级；命中画像词：奖学金/课题
+URL:https://jc.gxmu.edu.cn/jc2019xywj/t206204.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-96@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260112
+DTEND;VALUE=DATE:20260113
+SUMMARY:[P3] 关于做好2026年国家公派出国留学项目申报工作的通知
+DESCRIPTION:来源：基础医学院通知\n原文：https://jc.gxmu.edu.cn/jc2019xywj/t227446.html\n依据：识别到截止日 2026-01-12；命中一般事务词：通知/提交/论文；截止日已过 261 天，降级；命中画像词：课题
+URL:https://jc.gxmu.edu.cn/jc2019xywj/t227446.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-86@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260626
+DTEND;VALUE=DATE:20260627
+SUMMARY:[P3] 关于办理2025-2026学年下学期本科课程缓考手续的通知
+DESCRIPTION:来源：教务处通知\n原文：https://jwc.gxmu.edu.cn/jwxx/jwtz/t236478.html\n依据：识别到截止日 2026-06-26；命中事务词：必须；截止日已过 96 天，降级；命中画像词：本科/重修/创新创业
+URL:https://jwc.gxmu.edu.cn/jwxx/jwtz/t236478.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-59@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260902
+DTEND;VALUE=DATE:20260903
+SUMMARY:[P3] 关于2026年秋季学期本科补考启用考试无纸化阅卷的通知
+DESCRIPTION:来源：内网张贴\n原文：https://www.gxmu.edu.cn/xwgk/nwtz/t238664.html\n依据：识别到截止日 2026-09-02；命中一般事务词：通知/提交/补考；截止日已过 28 天，降级；命中画像词：本科/补考/教务
+URL:https://www.gxmu.edu.cn/xwgk/nwtz/t238664.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-47@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260917
+DTEND;VALUE=DATE:20260918
+SUMMARY:[P3] 关于做好“青思汇”原创理论宣传宣讲作品征集报送工作的通知
+DESCRIPTION:来源：内网张贴\n原文：https://www.gxmu.edu.cn/xwgk/nwtz/t239493.html\n依据：识别到截止日 2026-09-17；命中一般事务词：通知/表；截止日已过 13 天，降级；命中画像词：普通话
+URL:https://www.gxmu.edu.cn/xwgk/nwtz/t239493.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-50@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260925
+DTEND;VALUE=DATE:20260926
+SUMMARY:[P3] 关于2026年中秋节、国庆节假期课程安排的通知
+DESCRIPTION:来源：内网张贴\n原文：https://www.gxmu.edu.cn/xwgk/nwtz/t239408.html\n依据：识别到截止日 2026-09-25；命中一般事务词：通知/提交/表；截止日已过 5 天，降级；命中画像词：本科/课表/放假
+URL:https://www.gxmu.edu.cn/xwgk/nwtz/t239408.html
+END:VEVENT
+BEGIN:VEVENT
+UID:shezhang1-79@local
+DTSTAMP:20260930T010012Z
+DTSTART;VALUE=DATE:20260928
+DTEND;VALUE=DATE:20260929
+SUMMARY:[P3] 关于广西医科大学2026年本科生转专业名单的公示
+DESCRIPTION:来源：教务处通知\n原文：https://jwc.gxmu.edu.cn/jwxx/jwtz/t240014.html\n依据：识别到截止日 2026-09-28；命中一般事务词：通知/表/学籍；截止日已过 2 天，降级；命中画像词：本科/本科生/普通话
+URL:https://jwc.gxmu.edu.cn/jwxx/jwtz/t240014.html
+END:VEVENT
+END:VCALENDAR
