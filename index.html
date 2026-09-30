@@ -2454,8 +2454,8 @@ renderNetStat();
     "#tododrawer .th{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #e3e6ea}",
     "#tododrawer .th b{font-size:15px;font-weight:600}",
     "#tododrawer .th .sp{flex:1}",
-    "#tododrawer .th button{border:1px solid #d5d9e0;background:#fff;border-radius:7px;",
-    "padding:4px 10px;cursor:pointer;font-size:12px;color:#475467}",
+    "#tododrawer .th button,#tododrawer .th a.tbtn{border:1px solid #d5d9e0;background:#fff;border-radius:7px;",
+    "padding:4px 10px;cursor:pointer;font-size:12px;color:#475467;text-decoration:none;display:inline-block}",
     "#tododrawer .body{flex:1;overflow-y:auto;padding:12px 16px 24px}",
     "#tododrawer .grp{margin:12px 0 6px;font-size:12px;color:#667085;font-weight:600}",
     "#tododrawer .it{padding:9px 11px;border:1px solid #e3e6ea;border-radius:9px;margin-bottom:7px;background:#fcfcfd}",
@@ -2493,7 +2493,7 @@ renderNetStat();
   var dr = document.createElement("div"); dr.id = "tododrawer";
   dr.innerHTML =
     '<div class="th"><b>信息全览</b><span class="sp"></span>' +
-    '<button onclick="loadTodoDrawer(true)">刷新并同步</button>' +
+    '<a id="todosync" class="tbtn" onclick="loadTodoDrawer(true)">刷新并同步</a>' +
     '<button onclick="closeTodoDrawer()">关闭</button></div>' +
     '<div id="qlocal" style="display:none"></div>' +
     '<div class="body" id="todobody"><div class="empty">载入中…</div></div>' +
@@ -2527,12 +2527,61 @@ renderNetStat();
   var LOCAL_API = "http://127.0.0.1:8890";
   var LOCAL = { ok:false, qq:[], qs:null };
 
+  // 站长开关：用带 ?owner=1 的地址访问一次，本浏览器就记住「这台电脑装了桥梁」。
+  // 只有带上这个标记，「刷新并同步」才会去唤起本机程序；普通访客没标记，站点行为完全不变。
+  var IS_OWNER = false;
+  try{
+    if(location.search.indexOf("owner=1") >= 0) localStorage.setItem("sz_owner","1");
+    IS_OWNER = localStorage.getItem("sz_owner") === "1";
+  }catch(e){}
+
+  // 本机桥梁没在跑时，靠「刷新并同步」那个链接把 shezhang1:// 协议唤起。
+  // ⚠️ 必须是**真实链接 + 真实点击**：Chrome 会检查用户手势，在 Promise.then() 里写
+  //    location.href 会被拦掉（"a user gesture is required"）。所以协议链接只在
+  //    「是站长本人 且 桥梁没跑」时挂到按钮上（见 syncSyncHref），点一下即生效。
+  // 下面这段只负责「起来之后自动把班群那块补上」，省得再点一次。
+  var _waking = false;
+  function watchBridgeUp(){
+    if(_waking) return;
+    _waking = true;
+    var n = 0;
+    var t = setInterval(function(){
+      n++;
+      if(n > 20){ clearInterval(t); _waking = false; return; }
+      probeLocal().then(function(){
+        if(LOCAL.ok){
+          clearInterval(t); _waking = false;
+          renderLocalBar();
+          var f = document.getElementById("todofoot");
+          if(f) f.textContent = "本机桥梁已启动，班群消息已载入。";
+        }
+      });
+    }, 1500);
+  }
+
+  // 按当前状态给「刷新并同步」配 href：
+  //   桥梁没跑 且 是站长本人 → 挂上 shezhang1:// 协议链接（点一下同时唤起+刷新）
+  //   其它情况 → 摘掉 href，退化成普通按钮
+  // 普通访客永远拿不到协议链接，站点行为与以前完全一致。
+  function syncSyncHref(){
+    var el = document.getElementById("todosync");
+    if(!el) return;
+    if(!LOCAL.ok && IS_OWNER){
+      el.setAttribute("href", "shezhang1://start");
+      el.title = "本机桥梁没在跑，点一下会同时把它启动起来";
+    }else{
+      el.removeAttribute("href");
+      el.removeAttribute("title");
+    }
+  }
+
   function probeLocal(){
     LOCAL.qq = []; LOCAL.qs = null; LOCAL.ok = false;
     return fetch(LOCAL_API + "/api/qqstatus", {cache:"no-store"})
       .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function(qs){
         LOCAL.qs = qs; LOCAL.ok = true;
+        try{ localStorage.setItem("sz_bridge_seen","1"); }catch(e){}
         return fetch(LOCAL_API + "/api/todo", {cache:"no-store"});
       })
       .then(function(r){ return r.json(); })
@@ -2547,6 +2596,7 @@ renderNetStat();
   function renderLocalBar(){
     var box = document.getElementById("qlocal");
     if(!box) return;
+    syncSyncHref();
     if(!LOCAL.ok){ box.style.display = "none"; box.innerHTML = ""; return; }
     var st = (LOCAL.qs && LOCAL.qs.status) || {};
     box.style.display = "block";
@@ -2596,6 +2646,12 @@ renderNetStat();
     var body = document.getElementById("todobody");
     var foot = document.getElementById("todofoot");
     body.innerHTML = '<div class="empty">载入中…</div>';
+    // 「刷新并同步」被点：本机桥梁没在跑时，协议链接已经在按钮上（syncSyncHref），
+    // 浏览器会在这同一次点击里把它唤起；这里只挂个等待器，起来后自动补上班群那块。
+    if(force && !LOCAL.ok && IS_OWNER){
+      foot.textContent = "正在唤起本机桥梁…起来了会自动载入班群消息";
+      watchBridgeUp();
+    }
     // 公开公告 + 本机班群消息并行取；本机那路失败不影响公告展示
     Promise.all([
       fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
