@@ -2529,10 +2529,14 @@ renderNetStat();
 
   // 站长开关：用带 ?owner=1 的地址访问一次，本浏览器就记住「这台电脑装了桥梁」。
   // 只有带上这个标记，「刷新并同步」才会去唤起本机程序；普通访客没标记，站点行为完全不变。
-  var IS_OWNER = false;
+  var IS_OWNER = false, HAS_BRIDGE = false;
   try{
     if(location.search.indexOf("owner=1") >= 0) localStorage.setItem("sz_owner","1");
     IS_OWNER = localStorage.getItem("sz_owner") === "1";
+    // HAS_BRIDGE = 这台浏览器**连上过**本机桥接（等于「装过分发包」的凭证）。
+    // 只有这种人点「刷新并同步」才会去唤起本机程序；从没连上过的普通访客
+    // 永远拿不到协议链接，站点行为与以前完全一致。
+    HAS_BRIDGE = IS_OWNER || localStorage.getItem("sz_bridge_seen") === "1";
   }catch(e){}
 
   // 本机桥梁没在跑时，靠「刷新并同步」那个链接把 shezhang1:// 协议唤起。
@@ -2547,7 +2551,14 @@ renderNetStat();
     var n = 0;
     var t = setInterval(function(){
       n++;
-      if(n > 20){ clearInterval(t); _waking = false; return; }
+      if(n > 20){
+        clearInterval(t); _waking = false;
+        var f0 = document.getElementById("todofoot");
+        if(f0) f0.textContent = HAS_BRIDGE
+          ? "没等到本机桥梁。双击一次分发包里的「双击启动.bat」，接上以后这里点一下就能开。"
+          : "这台电脑上没有装本机桥梁 —— 用分发包接一份即可。";
+        return;
+      }
       probeLocal().then(function(){
         if(LOCAL.ok){
           clearInterval(t); _waking = false;
@@ -2566,7 +2577,10 @@ renderNetStat();
   function syncSyncHref(){
     var el = document.getElementById("todosync");
     if(!el) return;
-    if(!LOCAL.ok && IS_OWNER){
+    // 桥梁没在跑就给这个按钮挂上协议链接：点一下 = 唤起本机桥接 + 刷新数据。
+    // 不设门槛——装了分发包的人（第一次就可能还没连上过）也要能一键唤起。
+    // 没装的人点了只会打不开协议，不会出错、不影响别的功能。
+    if(!LOCAL.ok){
       el.setAttribute("href", "shezhang1://start");
       el.title = "本机桥梁没在跑，点一下会同时把它启动起来";
     }else{
@@ -2581,6 +2595,7 @@ renderNetStat();
       .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function(qs){
         LOCAL.qs = qs; LOCAL.ok = true;
+        HAS_BRIDGE = true;
         try{ localStorage.setItem("sz_bridge_seen","1"); }catch(e){}
         return fetch(LOCAL_API + "/api/todo", {cache:"no-store"});
       })
@@ -2597,7 +2612,21 @@ renderNetStat();
     var box = document.getElementById("qlocal");
     if(!box) return;
     syncSyncHref();
-    if(!LOCAL.ok){ box.style.display = "none"; box.innerHTML = ""; return; }
+    if(!LOCAL.ok){
+      // 装过本机桥梁的人：留一条轻提示，免得以为「班群消息 / 接入机器人」那块不见了。
+      // 从没连上过的普通访客：保持完全隐藏，站点照旧纯净。
+      if(HAS_BRIDGE){
+        box.style.display = "block";
+        box.innerHTML =
+          '<div class="qbar">' +
+            '<span class="qdot"></span>' +
+            '<span>本机桥梁未启动 —— 点上面的「刷新并同步」就能把它拉起来</span>' +
+          '</div>';
+      }else{
+        box.style.display = "none"; box.innerHTML = "";
+      }
+      return;
+    }
     var st = (LOCAL.qs && LOCAL.qs.status) || {};
     box.style.display = "block";
     box.innerHTML =
