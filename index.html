@@ -2470,7 +2470,19 @@ renderNetStat();
     "#tododrawer .it.pin{border-left:3px solid #f4b400;background:#fffbf0}",
     "#tododrawer .grp.pgrp{color:#b54708}",
     "#tododrawer .empty{text-align:center;color:#98a2b3;padding:48px 0}",
-    "#tododrawer .foot{padding:9px 16px;border-top:1px solid #e3e6ea;font-size:11px;color:#98a2b3}"
+    "#tododrawer .foot{padding:9px 16px;border-top:1px solid #e3e6ea;font-size:11px;color:#98a2b3}",
+    "#tododrawer .it.qq{border-left:3px solid #2f80ed;background:#f7fbff}",
+    "#tododrawer .grp.qgrp{color:#1a56db}",
+    "#qlocal{padding:0 16px;flex:none}",
+    "#qlocal .qbar{display:flex;align-items:center;gap:8px;margin:10px 0 0;padding:7px 10px;border:1px solid #e3e6ea;border-radius:8px;background:#fcfcfd;font-size:12px;color:#475467}",
+    "#qlocal .qdot{width:8px;height:8px;border-radius:50%;background:#98a2b3;display:inline-block;flex:none}",
+    "#qlocal .qdot.ok{background:#12b76a}",
+    "#qlocal .qbar a{margin-left:auto;color:#1a56db;cursor:pointer;text-decoration:none;font-size:11.5px}",
+    "#qlocal #qqcfg{margin-top:8px;padding:10px;border:1px solid #e3e6ea;border-radius:8px;background:#fff}",
+    "#qlocal #qqcfg input{width:100%;box-sizing:border-box;margin:4px 0;padding:7px 9px;border:1px solid #d5d9e0;border-radius:7px;font-size:12.5px}",
+    "#qlocal #qqcfg .qrow{display:flex;gap:6px;margin-top:6px}",
+    "#qlocal #qqcfg .qrow button{border:1px solid #d5d9e0;background:#fff;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px}",
+    "#qlocal .qhint{font-size:11px;color:#98a2b3;line-height:1.6;margin-top:8px}"
   ].join("");
   var st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
 
@@ -2481,8 +2493,9 @@ renderNetStat();
   var dr = document.createElement("div"); dr.id = "tododrawer";
   dr.innerHTML =
     '<div class="th"><b>信息全览</b><span class="sp"></span>' +
-    '<button onclick="loadTodoDrawer(true)">刷新</button>' +
+    '<button onclick="loadTodoDrawer(true)">刷新并同步</button>' +
     '<button onclick="closeTodoDrawer()">关闭</button></div>' +
+    '<div id="qlocal" style="display:none"></div>' +
     '<div class="body" id="todobody"><div class="empty">载入中…</div></div>' +
     '<div class="foot" id="todofoot"></div>';
   document.body.appendChild(dr);
@@ -2506,21 +2519,101 @@ renderNetStat();
     dr.classList.remove("open"); mask.classList.remove("open");
   };
 
+  // ===== 本机桥接探测 =====
+  // 网页版是公开静态站：没有后端，也没地方安放 AppSecret（放前端 = 公开泄露）。
+  // 所以班群消息由**本机的蛇杖桥接**（127.0.0.1:8890）提供：探测到才有班群那一块，
+  // 探测不到（别人打开这个站、或桥接没启动）就整块不显示，站点照旧纯净。
+  // 数据不出本机——页面上只有代码，不含任何账号或消息。
+  var LOCAL_API = "http://127.0.0.1:8890";
+  var LOCAL = { ok:false, qq:[], qs:null };
+
+  function probeLocal(){
+    LOCAL.qq = []; LOCAL.qs = null; LOCAL.ok = false;
+    return fetch(LOCAL_API + "/api/qqstatus", {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(qs){
+        LOCAL.qs = qs; LOCAL.ok = true;
+        return fetch(LOCAL_API + "/api/todo", {cache:"no-store"});
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(all){
+        LOCAL.qq = (all || []).filter(function(x){
+          return x.source === "qq" && x.status !== "archived"; });
+        return LOCAL;
+      })
+      .catch(function(){ LOCAL.ok = false; LOCAL.qq = []; LOCAL.qs = null; return LOCAL; });
+  }
+
+  function renderLocalBar(){
+    var box = document.getElementById("qlocal");
+    if(!box) return;
+    if(!LOCAL.ok){ box.style.display = "none"; box.innerHTML = ""; return; }
+    var st = (LOCAL.qs && LOCAL.qs.status) || {};
+    box.style.display = "block";
+    box.innerHTML =
+      '<div class="qbar">' +
+        '<span class="qdot' + (st.ok ? " ok" : "") + '"></span>' +
+        '<span>班群机器人：' + esc(st.state || "未启动") +
+          (st.ok && st.msg_count ? "（收到 " + st.msg_count + " 条）" : "") +
+          (!LOCAL.qs.configured ? " · 还没填 AppID/Secret" : "") + '</span>' +
+        '<a onclick="toggleQQCfg()">接入我的机器人 ▾</a>' +
+      '</div>' +
+      '<div id="qqcfg" style="display:none">' +
+        '<input id="qqAppid" placeholder="AppID（QQ 开放平台 → 我的机器人）" autocomplete="off">' +
+        '<input id="qqSecret" type="password" placeholder="AppSecret（只写进本机，不上传）" autocomplete="off">' +
+        '<div class="qrow">' +
+          '<button onclick="saveQQCfg()">保存并连接</button>' +
+          '<button onclick="toggleQQCfg()">收起</button>' +
+        '</div>' +
+        '<div class="qhint">填完立即连接，不用重启程序。想让机器人看到群里所有人的消息，' +
+          '需要群主在群设置里把「机器人可访问的消息」设为全部群消息。<br>' +
+          '注意：QQ 官方机器人只能<b>被动接收</b>，没有拉取历史消息的接口——' +
+          '<b>程序没运行时的群消息收不到</b>。AppSecret 只提交给本机 127.0.0.1，不会上传。</div>' +
+      '</div>';
+  }
+
+  window.toggleQQCfg = function(){
+    var e = document.getElementById("qqcfg");
+    if(e) e.style.display = (e.style.display === "block") ? "none" : "block";
+  };
+  window.saveQQCfg = function(){
+    var a = document.getElementById("qqAppid").value.trim();
+    var s = document.getElementById("qqSecret").value.trim();
+    if(!a || !s){ alert("AppID 和 AppSecret 都要填"); return; }
+    fetch(LOCAL_API + "/api/qqconfig", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({appid:a, secret:s, enabled:true})
+    }).then(function(r){ return r.json(); }).then(function(j){
+      LOCAL.qs = j;
+      document.getElementById("qqSecret").value = "";
+      renderLocalBar();
+      alert("已保存并开始连接，看状态点（连上变绿）。");
+    }).catch(function(e){ alert("保存失败：" + e); });
+  };
+
   var cache = null;
   window.loadTodoDrawer = function(force){
     var body = document.getElementById("todobody");
     var foot = document.getElementById("todofoot");
-    if(cache && !force){ renderTodo(cache); return; }
     body.innerHTML = '<div class="empty">载入中…</div>';
-    fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
-      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function(d){ cache = d; renderTodo(d); })
-      .catch(function(e){
+    // 公开公告 + 本机班群消息并行取；本机那路失败不影响公告展示
+    Promise.all([
+      fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
+        .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+        .catch(function(e){ return {"__err": (e && e.message) || String(e)}; }),
+      probeLocal()
+    ]).then(function(res){
+      var d = res[0];
+      renderLocalBar();
+      if(d && d.__err){
         body.innerHTML = '<div class="empty">读不到信息全览数据。<br><br>' +
           '<span style="font-size:12px">本机 bridge 每次同步会生成 data/todo.json。<br>' +
-          '确认已跑过 <code>python bridge.py sync</code>。<br>(' + (e.message||e) + ')</span></div>';
+          '确认已跑过 <code>python bridge.py sync</code>。<br>(' + esc(d.__err) + ')</span></div>';
         foot.textContent = "";
-      });
+        return;
+      }
+      cache = d; renderTodo(d);
+    });
   };
 
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
@@ -2557,13 +2650,30 @@ renderNetStat();
         "</div></div>";
     }
 
+    // 班群消息单条：字段来自本机桥接（有 src_name，没有 url）。
+    // 刻意不显示发言人昵称——这个页面的代码是公开的，不把同学名字写进渲染逻辑。
+    function oneQQ(x){
+      n++;
+      return '<div class="it qq"><div class="t">' + esc(x.title) + "</div>" +
+        '<div class="m">' +
+          (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
+          "<span>" + esc(x.src_name || "班群") + "</span>" +
+          (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
+        "</div></div>";
+    }
+
     // ① 置顶：比赛 / 竞赛类排最前（主公要求——这类要第一眼看到）
     var pinned = items.filter(function(x){ return x.pin; });
     if(pinned.length){
       html += '<div class="grp pgrp">🏆 比赛 / 竞赛（' + pinned.length + '）</div>';
       pinned.forEach(function(x){ html += one(x, "pin"); });
     }
-    // ② 其余按 P0–P3
+    // ② 班群消息（来自本机桥接；只在跑着桥接的机器上出现，排在比赛之后）
+    if(LOCAL.ok && LOCAL.qq.length){
+      html += '<div class="grp qgrp">💬 班群消息（' + LOCAL.qq.length + '）</div>';
+      LOCAL.qq.forEach(function(x){ html += oneQQ(x); });
+    }
+    // ③ 其余按 P0–P3
     LV.forEach(function(lv){
       var g = items.filter(function(x){ return !x.pin && x.level === lv; });
       if(!g.length) return;
