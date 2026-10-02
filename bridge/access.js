@@ -332,7 +332,9 @@ function bindAdmin(w, salt, pw){
     if(n.length < 6){ set('r2','至少 6 位','#b91c1c'); return; }
     var r = null;
     try{ r = await window.callCloud('adminpw', {pw: pw, salt: salt, newpw: n}); }catch(e){ r = null; }
-    if(r && r.code === 0) set('r2','已修改。下次进后台请用新密码。','#059669');
+    /* 云函数 adminpw 成功时返回 {action:'adminpw', msg:'adminpw-updated'}，没有 code:0
+       —— 所以判断要放宽：有 action 字段就算成功（跟 act() 里同一套判据）。 */
+    if(r && (r.code === 0 || r.action === 'adminpw')) set('r2','已修改。下次进后台请用新密码。','#059669');
     else set('r2','失败：' + ((r && r.msg) || ''), '#b91c1c');
   });
   var bu = d.getElementById('bup');
