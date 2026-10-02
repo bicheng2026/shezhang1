@@ -2997,11 +2997,21 @@ renderNetStat();
       html += '<div class="grp">' + lv + " · " + NM[lv] + "（" + g.length + "）</div>";
       g.forEach(function(x){
         n++;
-        html += '<div class="it ' + lv + '"><div class="t">' + esc(x.title) + "</div>" +
+        /* 2026-10-03：标题做成可点击直达官网原文。
+           ⚠️ 只信任 http(s) 开头的地址，挡掉 javascript: 之类的注入；
+              rel="noopener noreferrer" 防止新页面拿到本页句柄。 */
+        var u = (typeof x.url === "string" && /^https?:\/\//i.test(x.url)) ? x.url : "";
+        var titleHtml = u
+          ? '<a href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" ' +
+            'style="color:inherit;text-decoration:none;border-bottom:1px dashed currentColor">' +
+            esc(x.title) + ' <span style="opacity:.55;font-size:11px">↗</span></a>'
+          : esc(x.title);
+        html += '<div class="it ' + lv + '"><div class="t">' + titleHtml + "</div>" +
           '<div class="m">' +
             (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
             "<span>来自 " + esc(x.src) + "</span>" +
             (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
+            (u ? '<span style="opacity:.6">可点标题直达原文</span>' : "") +
           "</div></div>";
       });
     });
