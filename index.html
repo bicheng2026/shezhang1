@@ -523,7 +523,7 @@ async function decBytes(rel, buf, start){
    单章按字节区间精准取，避免整卷下载。 */
 const RAWBASE = "https://raw.githubusercontent.com/bicheng2026/shezhang1/main/lib/";
 let DOCS = [], cache = {}, busy = false;
-const VERSION = "2026.09.30";
+const VERSION = "2026.09.16";
 
 /* ============ 密码 ============ */
 async function sha256(s){
@@ -916,10 +916,10 @@ async function ask(opt){
       try{
         if(h.i >= 0){
           const body = await cap(sliceSec(h.d, h.i), 6000);
-          return body ? {src:`${h.d.t} · ${h.ti}`, txt:body, deck:isDeckDoc(h.d)} : null;
+          return body ? {src:`${h.d.t} · ${h.ti}`, txt:body} : null;
         }
         const span = await cap(headSpan(h.d), 6000);
-        return span ? findRelated(span, q).map((p,k)=>({src:`${h.d.t}（册内定位${k+1}）`, txt:p, deck:isDeckDoc(h.d)})) : null;
+        return span ? findRelated(span, q).map((p,k)=>({src:`${h.d.t}（册内定位${k+1}）`, txt:p})) : null;
       }catch(e){ return null; }
     })),
     netP
@@ -949,10 +949,8 @@ async function ask(opt){
 
   // 来源卡片（青色 = 文库原文）
   if(hasRef){
-    // PPT/课件类不出现在来源卡片里（内容照旧喂给 AI，只是不列出来）。
-    // 编号保持原序不重排，正文里的〔3〕仍对得上——虽然那一行不显示。
-    const shown = parts.map((p,i)=> p.deck ? "" : `<div>〔${i+1}〕${esc(p.src)}</div>`).join("");
-    const srcHtml = `<b>本次为你调用的教材原文（${parts.length} 处）：</b>` + shown;
+    const srcHtml = `<b>本次为你调用的教材原文（${parts.length} 处）：</b>` + parts.map((p,i)=>
+      `<div>〔${i+1}〕${esc(p.src)}</div>`).join("");
     addMsg("蛇杖一号", srcHtml, "src");
   }
   // 联网来源卡片（蓝色 = 网络资料）
@@ -2262,14 +2260,6 @@ function hardReload(){
   document.addEventListener("visibilitychange", () => { if(!document.hidden) checkVer(); });
 })();
 
-/* PPT / 课件类资料：正文照常参与检索、供 AI 参考，但「来源卡片」里不把它列出来。
-   主公要求：库里可以有 PPT、要参考它们的内容，但不要在来源里露出它们。 */
-function isDeckDoc(d){
-  if(!d) return false;
-  const s = String(d.f || "") + " " + String(d.t || "");
-  return /\.(ppt|pptx|pps|ppsx)(\b|$)/i.test(s) || /课件|幻灯片|讲义/.test(s);
-}
-
 /* ============ 桌面版：文库导航 + 阅读面板（移植自窑洞一号，catOf 适配蛇杖索引）============ */
 function catOf(f){
   if(f.indexOf("01_教材")>=0) return "① 教材";
@@ -2282,12 +2272,10 @@ const _CAT_ORDER = ["① 教材","② 课件题库","③ 学科资料","④ 待�
 let _docsAll = [];
 function buildSidebar(){
   if(!DOCS || !DOCS.length) return;
-  // 主公定：侧边栏只留「① 教材」的阅读入口，课件题库/学科资料/待入库等不再上侧栏。
-  // 注意只是「不显示」——DOCS 本身没动，AI 检索依旧覆盖全部资料，不影响问答取材。
-  _docsAll = DOCS.filter(d => catOf(d.f) === "① 教材");
+  _docsAll = DOCS.slice();
   renderDocList(_docsAll);
   const sf = document.getElementById("sidefoot");
-  if(sf) sf.textContent = _docsAll.length + " 部教材 · 离线可用";
+  if(sf) sf.textContent = DOCS.length + " 部文献 · 离线可用";
 }
 function renderDocList(docs){
   const list = document.getElementById("doclist");
@@ -2439,7 +2427,7 @@ applyThink();
 applyNet();
 renderNetStat();
 
-/* ============ 信息全览 / 官网公告 · 抽屉 ============
+/* ============ 待办 / 官网公告 · 抽屉 ============
    动态注入，不动原有 DOM 结构。数据来自 data/todo.json，
    由本机 bridge 每次同步时导出（默认只含官网/图书馆公告，不含 QQ 群）。 */
 (function(){
@@ -2454,35 +2442,20 @@ renderNetStat();
     "#tododrawer .th{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid #e3e6ea}",
     "#tododrawer .th b{font-size:15px;font-weight:600}",
     "#tododrawer .th .sp{flex:1}",
-    "#tododrawer .th button,#tododrawer .th a.tbtn{border:1px solid #d5d9e0;background:#fff;border-radius:7px;",
-    "padding:4px 10px;cursor:pointer;font-size:12px;color:#475467;text-decoration:none;display:inline-block}",
+    "#tododrawer .th button{border:1px solid #d5d9e0;background:#fff;border-radius:7px;",
+    "padding:4px 10px;cursor:pointer;font-size:12px;color:#475467}",
     "#tododrawer .body{flex:1;overflow-y:auto;padding:12px 16px 24px}",
     "#tododrawer .grp{margin:12px 0 6px;font-size:12px;color:#667085;font-weight:600}",
     "#tododrawer .it{padding:9px 11px;border:1px solid #e3e6ea;border-radius:9px;margin-bottom:7px;background:#fcfcfd}",
     "#tododrawer .it .t{font-weight:500;line-height:1.45}",
-    "#tododrawer .it .t a{color:#1a56db;text-decoration:none}",
-    "#tododrawer .it .t a:hover{text-decoration:underline}",
-    "#tododrawer .it .m a.go{color:#1a56db;text-decoration:none;font-weight:500}",
-    "#tododrawer .it .m a.go:hover{text-decoration:underline}",
     "#tododrawer .it .m{margin-top:4px;font-size:11.5px;color:#667085;display:flex;gap:10px;flex-wrap:wrap}",
     "#tododrawer .it.P0{border-left:3px solid #d92d20}#tododrawer .it.P1{border-left:3px solid #f79009}",
     "#tododrawer .it.P2{border-left:3px solid #eaaa08}#tododrawer .it.P3{border-left:3px solid #98a2b3}",
-    "#tododrawer .it.pin{border-left:3px solid #f4b400;background:#fffbf0}",
-    "#tododrawer .grp.pgrp{color:#b54708}",
     "#tododrawer .empty{text-align:center;color:#98a2b3;padding:48px 0}",
     "#tododrawer .foot{padding:9px 16px;border-top:1px solid #e3e6ea;font-size:11px;color:#98a2b3}",
-    "#tododrawer .it.qq{border-left:3px solid #2f80ed;background:#f7fbff}",
-    "#tododrawer .grp.qgrp{color:#1a56db}",
-    "#qlocal{padding:0 16px;flex:none}",
-    "#qlocal .qbar{display:flex;align-items:center;gap:8px;margin:10px 0 0;padding:7px 10px;border:1px solid #e3e6ea;border-radius:8px;background:#fcfcfd;font-size:12px;color:#475467}",
-    "#qlocal .qdot{width:8px;height:8px;border-radius:50%;background:#98a2b3;display:inline-block;flex:none}",
-    "#qlocal .qdot.ok{background:#12b76a}",
-    "#qlocal .qbar a{margin-left:auto;color:#1a56db;cursor:pointer;text-decoration:none;font-size:11.5px}",
-    "#qlocal #qqcfg{margin-top:8px;padding:10px;border:1px solid #e3e6ea;border-radius:8px;background:#fff}",
-    "#qlocal #qqcfg input{width:100%;box-sizing:border-box;margin:4px 0;padding:7px 9px;border:1px solid #d5d9e0;border-radius:7px;font-size:12.5px}",
-    "#qlocal #qqcfg .qrow{display:flex;gap:6px;margin-top:6px}",
-    "#qlocal #qqcfg .qrow button{border:1px solid #d5d9e0;background:#fff;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px}",
-    "#qlocal .qhint{font-size:11px;color:#98a2b3;line-height:1.6;margin-top:8px}"
+    "#tododrawer .ttabs{display:flex;gap:6px;padding:8px 12px 0;border-bottom:1px solid rgba(0,0,0,.08)}",
+    "#tododrawer .ttabs button{border:0;background:transparent;padding:7px 12px;font:inherit;font-size:13px;color:#667085;cursor:pointer;border-bottom:2px solid transparent}",
+    "#tododrawer .ttabs button.on{color:#1f2328;font-weight:600;border-bottom-color:#3b82f6}",
   ].join("");
   var st = document.createElement("style"); st.textContent = CSS; document.head.appendChild(st);
 
@@ -2492,11 +2465,15 @@ renderNetStat();
 
   var dr = document.createElement("div"); dr.id = "tododrawer";
   dr.innerHTML =
-    '<div class="th"><b>信息全览</b><span class="sp"></span>' +
-    '<a id="todosync" class="tbtn" onclick="loadTodoDrawer(true)">刷新并同步</a>' +
+    '<div class="th"><b>待办 · 官网公告</b><span class="sp"></span>' +
+    '<button onclick="loadTodoDrawer(true);loadQqDigest(true)">刷新</button>' +
     '<button onclick="closeTodoDrawer()">关闭</button></div>' +
-    '<div id="qlocal" style="display:none"></div>' +
+    '<div class="ttabs">' +
+      '<button id="tab-ann" class="on" onclick="szSwitchTab(0)">公告与待办</button>' +
+      '<button id="tab-qq" onclick="szSwitchTab(1)">班群摘要</button>' +
+    '</div>' +
     '<div class="body" id="todobody"><div class="empty">载入中…</div></div>' +
+    '<div class="body" id="qqdigest" style="display:none"><div class="empty">载入中…</div></div>' +
     '<div class="foot" id="todofoot"></div>';
   document.body.appendChild(dr);
 
@@ -2504,8 +2481,8 @@ renderNetStat();
   var hdr = document.querySelector("#main header");
   if(hdr){
     var b = document.createElement("button");
-    b.className = "iconbtn"; b.title = "信息全览：比赛 / 公告 / 通知";
-    b.innerHTML = '信息全览<span id="todocnt"></span>';
+    b.className = "iconbtn"; b.title = "待办与官网公告";
+    b.innerHTML = '待办<span id="todocnt"></span>';
     b.onclick = function(){ toggleTodoDrawer(); };
     hdr.appendChild(b);
   }
@@ -2519,186 +2496,71 @@ renderNetStat();
     dr.classList.remove("open"); mask.classList.remove("open");
   };
 
-  // ===== 本机桥接探测 =====
-  // 网页版是公开静态站：没有后端，也没地方安放 AppSecret（放前端 = 公开泄露）。
-  // 所以班群消息由**本机的蛇杖桥接**（127.0.0.1:8890）提供：探测到才有班群那一块，
-  // 探测不到（别人打开这个站、或桥接没启动）就整块不显示，站点照旧纯净。
-  // 数据不出本机——页面上只有代码，不含任何账号或消息。
-  var LOCAL_API = "http://127.0.0.1:8890";
-  var LOCAL = { ok:false, qq:[], qs:null };
-
-  // 站长开关：用带 ?owner=1 的地址访问一次，本浏览器就记住「这台电脑装了桥梁」。
-  // 只有带上这个标记，「刷新并同步」才会去唤起本机程序；普通访客没标记，站点行为完全不变。
-  var IS_OWNER = false, HAS_BRIDGE = false;
-  try{
-    if(location.search.indexOf("owner=1") >= 0) localStorage.setItem("sz_owner","1");
-    IS_OWNER = localStorage.getItem("sz_owner") === "1";
-    // HAS_BRIDGE = 这台浏览器**连上过**本机桥接（等于「装过分发包」的凭证）。
-    // 只有这种人点「刷新并同步」才会去唤起本机程序；从没连上过的普通访客
-    // 永远拿不到协议链接，站点行为与以前完全一致。
-    HAS_BRIDGE = IS_OWNER || localStorage.getItem("sz_bridge_seen") === "1";
-  }catch(e){}
-
-  // 本机桥梁没在跑时，靠「刷新并同步」那个链接把 shezhang1:// 协议唤起。
-  // ⚠️ 必须是**真实链接 + 真实点击**：Chrome 会检查用户手势，在 Promise.then() 里写
-  //    location.href 会被拦掉（"a user gesture is required"）。所以协议链接只在
-  //    「是站长本人 且 桥梁没跑」时挂到按钮上（见 syncSyncHref），点一下即生效。
-  // 下面这段只负责「起来之后自动把班群那块补上」，省得再点一次。
-  var _waking = false;
-  function watchBridgeUp(){
-    if(_waking) return;
-    _waking = true;
-    var n = 0;
-    var t = setInterval(function(){
-      n++;
-      if(n > 20){
-        clearInterval(t); _waking = false;
-        var f0 = document.getElementById("todofoot");
-        if(f0) f0.textContent = HAS_BRIDGE
-          ? "没等到本机桥梁。双击一次分发包里的「双击启动.bat」，接上以后这里点一下就能开。"
-          : "这台电脑上没有装本机桥梁 —— 用分发包接一份即可。";
-        return;
-      }
-      probeLocal().then(function(){
-        if(LOCAL.ok){
-          clearInterval(t); _waking = false;
-          renderLocalBar();
-          var f = document.getElementById("todofoot");
-          if(f) f.textContent = "本机桥梁已启动，班群消息已载入。";
-        }
-      });
-    }, 1500);
-  }
-
-  // 按当前状态给「刷新并同步」配 href：
-  //   桥梁没跑 且 是站长本人 → 挂上 shezhang1:// 协议链接（点一下同时唤起+刷新）
-  //   其它情况 → 摘掉 href，退化成普通按钮
-  // 普通访客永远拿不到协议链接，站点行为与以前完全一致。
-  function syncSyncHref(){
-    var el = document.getElementById("todosync");
-    if(!el) return;
-    // 桥梁没在跑就给这个按钮挂上协议链接：点一下 = 唤起本机桥接 + 刷新数据。
-    // 不设门槛——装了分发包的人（第一次就可能还没连上过）也要能一键唤起。
-    // 没装的人点了只会打不开协议，不会出错、不影响别的功能。
-    if(!LOCAL.ok){
-      el.setAttribute("href", "shezhang1://start");
-      el.title = "本机桥梁没在跑，点一下会同时把它启动起来";
-    }else{
-      el.removeAttribute("href");
-      el.removeAttribute("title");
-    }
-  }
-
-  function probeLocal(){
-    LOCAL.qq = []; LOCAL.qs = null; LOCAL.ok = false;
-    return fetch(LOCAL_API + "/api/qqstatus", {cache:"no-store"})
-      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function(qs){
-        LOCAL.qs = qs; LOCAL.ok = true;
-        HAS_BRIDGE = true;
-        try{ localStorage.setItem("sz_bridge_seen","1"); }catch(e){}
-        return fetch(LOCAL_API + "/api/todo", {cache:"no-store"});
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(all){
-        LOCAL.qq = (all || []).filter(function(x){
-          return x.source === "qq" && x.status !== "archived"; });
-        return LOCAL;
-      })
-      .catch(function(){ LOCAL.ok = false; LOCAL.qq = []; LOCAL.qs = null; return LOCAL; });
-  }
-
-  function renderLocalBar(){
-    var box = document.getElementById("qlocal");
+  /* ============ 班群摘要（2026-10-03）============
+     数据来自 data/qq_digest.json：腾讯云云函数验签+脱敏+提纯后写入，
+     或本机 pull_qq.py 生成。只放有信息量的通知类内容，不含姓名/学号/手机号。
+     URL 带时间戳 + no-store，绕开 GitHub Pages 的 10 分钟 CDN 缓存。 */
+  var qqDigestCache = null;
+  function renderQqDigest(j, err){
+    var box = document.getElementById("qqdigest");
     if(!box) return;
-    syncSyncHref();
-    if(!LOCAL.ok){
-      // 装过本机桥梁的人：留一条轻提示，免得以为「班群消息 / 接入机器人」那块不见了。
-      // 从没连上过的普通访客：保持完全隐藏，站点照旧纯净。
-      if(HAS_BRIDGE){
-        box.style.display = "block";
-        box.innerHTML =
-          '<div class="qbar">' +
-            '<span class="qdot"></span>' +
-            '<span>本机桥梁未启动 —— 点上面的「刷新并同步」就能把它拉起来</span>' +
-          '</div>';
-      }else{
-        box.style.display = "none"; box.innerHTML = "";
-      }
+    if(err){
+      box.innerHTML = '<div class="empty">暂时读不到班群摘要（' + esc(err) + '）<br>这不影响公告查看。</div>';
       return;
     }
-    var st = (LOCAL.qs && LOCAL.qs.status) || {};
-    box.style.display = "block";
-    box.innerHTML =
-      '<div class="qbar">' +
-        '<span class="qdot' + (st.ok ? " ok" : "") + '"></span>' +
-        '<span>班群机器人：' + esc(st.state || "未启动") +
-          (st.ok && st.msg_count ? "（收到 " + st.msg_count + " 条）" : "") +
-          (!LOCAL.qs.configured ? " · 还没填 AppID/Secret" : "") + '</span>' +
-        '<a onclick="toggleQQCfg()">接入我的机器人 ▾</a>' +
-      '</div>' +
-      '<div id="qqcfg" style="display:none">' +
-        '<input id="qqAppid" placeholder="AppID（QQ 开放平台 → 我的机器人）" autocomplete="off">' +
-        '<input id="qqSecret" type="password" placeholder="AppSecret（只写进本机，不上传）" autocomplete="off">' +
-        '<div class="qrow">' +
-          '<button onclick="saveQQCfg()">保存并连接</button>' +
-          '<button onclick="toggleQQCfg()">收起</button>' +
-        '</div>' +
-        '<div class="qhint">填完立即连接，不用重启程序。想让机器人看到群里所有人的消息，' +
-          '需要群主在群设置里把「机器人可访问的消息」设为全部群消息。<br>' +
-          '注意：QQ 官方机器人只能<b>被动接收</b>，没有拉取历史消息的接口——' +
-          '<b>程序没运行时的群消息收不到</b>。AppSecret 只提交给本机 127.0.0.1，不会上传。</div>' +
-      '</div>';
+    if(!j || !j.items || !j.items.length){
+      box.innerHTML = '<div class="empty">还没有收集到有信息量的班群消息<br>' +
+        '<span style="font-size:12px;opacity:.7">通知 / 截止 / 讲座 / 考试这类会上这里，闲聊不收</span></div>';
+      return;
+    }
+    var h = '<div style="font-size:12px;opacity:.72;margin:0 0 8px">' + esc(j.note || "") +
+      '<br>更新于 ' + esc(j.updated_text || "") + '　共 ' + j.items.length + ' 条</div>' +
+      '<ul style="list-style:none;margin:0;padding:0">';
+    for(var i=0;i<j.items.length;i++){
+      var it = j.items[i];
+      h += '<li style="border-left:3px solid #3b82f6;padding:7px 10px;margin:0 0 8px;' +
+        'border-radius:0 6px 6px 0;background:rgba(59,130,246,.06)">' +
+        '<div style="font-size:12px;opacity:.7;margin-bottom:2px">' + esc(it.timeText || it.time || "") + '</div>' +
+        '<div style="line-height:1.65">' + esc(it.text) + '</div></li>';
+    }
+    box.innerHTML = h + '</ul>';
   }
-
-  window.toggleQQCfg = function(){
-    var e = document.getElementById("qqcfg");
-    if(e) e.style.display = (e.style.display === "block") ? "none" : "block";
+  window.loadQqDigest = function(force){
+    if(qqDigestCache && !force) return Promise.resolve(qqDigestCache);
+    return fetch("data/qq_digest.json?t=" + Date.now(), {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(j){ qqDigestCache = j; renderQqDigest(j); return j; })
+      .catch(function(e){ renderQqDigest(null, (e && e.message) || String(e)); });
   };
-  window.saveQQCfg = function(){
-    var a = document.getElementById("qqAppid").value.trim();
-    var s = document.getElementById("qqSecret").value.trim();
-    if(!a || !s){ alert("AppID 和 AppSecret 都要填"); return; }
-    fetch(LOCAL_API + "/api/qqconfig", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({appid:a, secret:s, enabled:true})
-    }).then(function(r){ return r.json(); }).then(function(j){
-      LOCAL.qs = j;
-      document.getElementById("qqSecret").value = "";
-      renderLocalBar();
-      alert("已保存并开始连接，看状态点（连上变绿）。");
-    }).catch(function(e){ alert("保存失败：" + e); });
+  window.szSwitchTab = function(n){
+    var a = document.getElementById("todobody"), b = document.getElementById("qqdigest");
+    var ta = document.getElementById("tab-ann"), tb = document.getElementById("tab-qq");
+    if(!a || !b) return;
+    if(n === 1){
+      a.style.display = "none"; b.style.display = "block";
+      if(ta) ta.className = ""; if(tb) tb.className = "on";
+      window.loadQqDigest();
+    } else {
+      a.style.display = "block"; b.style.display = "none";
+      if(ta) ta.className = "on"; if(tb) tb.className = "";
+    }
   };
 
   var cache = null;
   window.loadTodoDrawer = function(force){
     var body = document.getElementById("todobody");
     var foot = document.getElementById("todofoot");
+    if(cache && !force){ renderTodo(cache); return; }
     body.innerHTML = '<div class="empty">载入中…</div>';
-    // 「刷新并同步」被点：本机桥梁没在跑时，协议链接已经在按钮上（syncSyncHref），
-    // 浏览器会在这同一次点击里把它唤起；这里只挂个等待器，起来后自动补上班群那块。
-    if(force && !LOCAL.ok && IS_OWNER){
-      foot.textContent = "正在唤起本机桥梁…起来了会自动载入班群消息";
-      watchBridgeUp();
-    }
-    // 公开公告 + 本机班群消息并行取；本机那路失败不影响公告展示
-    Promise.all([
-      fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
-        .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-        .catch(function(e){ return {"__err": (e && e.message) || String(e)}; }),
-      probeLocal()
-    ]).then(function(res){
-      var d = res[0];
-      renderLocalBar();
-      if(d && d.__err){
-        body.innerHTML = '<div class="empty">读不到信息全览数据。<br><br>' +
+    fetch("data/todo.json?t=" + Date.now(), {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function(d){ cache = d; renderTodo(d); })
+      .catch(function(e){
+        body.innerHTML = '<div class="empty">读不到待办数据。<br><br>' +
           '<span style="font-size:12px">本机 bridge 每次同步会生成 data/todo.json。<br>' +
-          '确认已跑过 <code>python bridge.py sync</code>。<br>(' + esc(d.__err) + ')</span></div>';
+          '确认已跑过 <code>python bridge.py sync</code>。<br>(' + (e.message||e) + ')</span></div>';
         foot.textContent = "";
-        return;
-      }
-      cache = d; renderTodo(d);
-    });
+      });
   };
 
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
@@ -2713,64 +2575,30 @@ renderNetStat();
     var items = (d && d.items) || [];
     if(cn) cn.textContent = items.length ? " " + items.length : "";
     if(!items.length){
-      body.innerHTML = '<div class="empty">暂无信息。</div>';
+      body.innerHTML = '<div class="empty">今天没有待办。</div>';
       foot.textContent = (d && d.updated_at) ? "更新于 " + d.updated_at : "";
       return;
     }
     var LV = ["P0","P1","P2","P3"], NM = {P0:"紧急",P1:"重要",P2:"一般",P3:"低"};
     var html = "", n = 0;
-
-    // 单条渲染：置顶组和分级组共用，避免两份代码走岔
-    function one(x, cls){
-      n++;
-      // 有原文链接就把标题做成可点击直达，而不是一条死的文字
-      var t = esc(x.title), u = (x.url && /^https?:\/\//i.test(x.url)) ? x.url : "";
-      if(u) t = '<a href="' + esc(u) + '" target="_blank" rel="noopener">' + t + "</a>";
-      return '<div class="it ' + cls + '"><div class="t">' + t + "</div>" +
-        '<div class="m">' +
-          (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
-          "<span>来自 " + esc(x.src) + "</span>" +
-          (u ? '<a class="go" href="' + esc(u) + '" target="_blank" rel="noopener">看原文 ↗</a>' : "") +
-          (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
-        "</div></div>";
-    }
-
-    // 班群消息单条：字段来自本机桥接（有 src_name，没有 url）。
-    // 刻意不显示发言人昵称——这个页面的代码是公开的，不把同学名字写进渲染逻辑。
-    function oneQQ(x){
-      n++;
-      return '<div class="it qq"><div class="t">' + esc(x.title) + "</div>" +
-        '<div class="m">' +
-          (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
-          "<span>" + esc(x.src_name || "班群") + "</span>" +
-          (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
-        "</div></div>";
-    }
-
-    // ① 置顶：比赛 / 竞赛类排最前（主公要求——这类要第一眼看到）
-    var pinned = items.filter(function(x){ return x.pin; });
-    if(pinned.length){
-      html += '<div class="grp pgrp">🏆 比赛 / 竞赛（' + pinned.length + '）</div>';
-      pinned.forEach(function(x){ html += one(x, "pin"); });
-    }
-    // ② 班群消息（来自本机桥接；只在跑着桥接的机器上出现，排在比赛之后）
-    if(LOCAL.ok && LOCAL.qq.length){
-      html += '<div class="grp qgrp">💬 班群消息（' + LOCAL.qq.length + '）</div>';
-      LOCAL.qq.forEach(function(x){ html += oneQQ(x); });
-    }
-    // ③ 其余按 P0–P3
     LV.forEach(function(lv){
-      var g = items.filter(function(x){ return !x.pin && x.level === lv; });
+      var g = items.filter(function(x){ return x.level === lv; });
       if(!g.length) return;
       html += '<div class="grp">' + lv + " · " + NM[lv] + "（" + g.length + "）</div>";
-      g.forEach(function(x){ html += one(x, lv); });
+      g.forEach(function(x){
+        n++;
+        html += '<div class="it ' + lv + '"><div class="t">' + esc(x.title) + "</div>" +
+          '<div class="m">' +
+            (x.ddl ? "<span>截止 " + esc(x.ddl) + "</span>" : "") +
+            "<span>来自 " + esc(x.src) + "</span>" +
+            (x.ts ? "<span>" + fmt(x.ts) + "</span>" : "") +
+          "</div></div>";
+      });
     });
     body.innerHTML = html;
-    // 底部挂一个「加入日历」：点一下下载 .ics，手机导入后 DDL 进系统日历、到点提醒
-    foot.innerHTML = "共 " + n + " 条" +
+    foot.textContent = "共 " + n + " 条" +
       (d.updated_at ? " ｜ 更新于 " + d.updated_at : "") +
-      (d.note ? " ｜ " + d.note : "") +
-      ' ｜ <a href="data/todo.ics" download style="color:#1a56db;text-decoration:none">📅 加入日历</a>';
+      (d.note ? " ｜ " + d.note : "");
   }
 
   // 启动后顺手取一次数量
