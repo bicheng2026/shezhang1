@@ -1,0 +1,11 @@
+name = "shezhang"
+main = "worker.js"
+compatibility_date = "2026-10-02"
+
+# KV 命名空间 SHEZHANG（已用 CF API 建好）
+[[kv_namespaces]]
+binding = "SHEZHANG"
+id = "<CF_KV_ID>"
+
+[vars]
+PUBLIC = "1"
