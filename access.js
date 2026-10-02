@@ -132,17 +132,77 @@ window.showChangePw = function(){
 /* 说明：纯前端反爬只能挡「无头浏览器以外的低级爬虫」，不是铁闸。
    真正的保护是「口令 + 密文索引」两层。这里做的是：robots 友好声明 + 不给搜索引擎收录 +
    访问太频繁就短暂限制。真要硬防，得上边缘函数（要备案域名，超出 0 元范围）。 */
-var _hits = [];
+var _hits = [], _pageHits = [];
 function antiAbuse(){
   var now = Date.now();
   _hits = _hits.filter(function(t){ return now - t < 60000; });
   _hits.push(now);
-  if(_hits.length > 120){          /* 1 分钟超过 120 次：判定为机器 */
-    return false;
-  }
+  if(_hits.length > 120) return false;
   return true;
 }
 window.antiAbuse = antiAbuse;
+
+/* ============ 反爬加固（2026-10-03）============
+   一、机器人识别：无头浏览器最典型的破绽是 navigator.webdriver / 无头 UA。
+      识别到就「假装报错」，不弹提示（弹提示等于告诉对方我们检测到了）。
+   二、粘性会话：必须先在页面里正常停留过、点过东西，才允许取整册（fullBytes）。
+      这样脚本必须模拟真实交互，纯 curl/requests 拿不到全文。
+   三、整册取文限流：短时间取多本整册就中断。
+   四、频率：每分钟请求上限，超过就降速。
+   ⚠️ 说实话：这些都是「提高爬取成本」，不是铁闸。密钥在客户端 JS 里，
+      愿意花功夫的人终究能拿到。真正的铁闸要上边缘函数做鉴权（需备案域名，超 0 元）。 */
+
+/* —— 1. 机器人识别 —— */
+window.isBot = function isBot(){
+  try{
+    if(navigator.webdriver === true) return true;
+    var ua = navigator.userAgent || "";
+    if(/HeadlessChrome|PhantomJS|Puppeteer|Playwright|Selenium|bot\/|crawler|spider|python-requests|curl\/|wget|libwww-perl|java\/|okhttp|axios/i.test(ua)) return true;
+    /* ⚠️ 以下两条容易误伤真人浏览器，慎用：
+       - navigator.languages 为空：部分安卓/隐私模式会为空 → 不作为判据
+       - plugins 数为 0：新版 Chrome 正常也是 0 → 只在 UA 也不像主流浏览器时才判
+       只保留「屏宽高为 0」这一条（真浏览器不会是 0）。 */
+    if(window.screen && (window.screen.width === 0 || window.screen.height === 0)) return true;
+  }catch(e){}
+  return false;
+}
+
+/* —— 2. 粘性会话：真人用过页面才放行整册 —— */
+var _human = false;
+function markHuman(){ _human = true; }
+window.markHuman = markHuman;
+function isHuman(){ return _human; }
+window.isHuman = isHuman;
+/* 页面加载 1.5 秒后、以及任何一次点击，都算「真人在用」 */
+setTimeout(function(){ _human = true; }, 1500);
+["click","keydown","mousemove","touchstart","wheel"].forEach(function(ev){
+  document.addEventListener(ev, function(){ _human = true; }, {once:true, passive:true});
+});
+
+/* —— 3. 整册取文限流（防批量拖书） —— */
+var _fullLog = [];
+window.fullAllow = function fullAllow(){
+  var now = Date.now();
+  _fullLog = _fullLog.filter(function(t){ return now - t < 120000; });
+  _fullLog.push(now);
+  if(_fullLog.length > 12) return false;   /* 2 分钟内取超过 12 本整册 → 拦 */
+  return true;
+}
+window.fullAllow = fullAllow;
+
+/* —— 4. 一次性「访问凭据」：页面启动时向云函数领一个短时令牌，
+      之后所有取文都要带它。没有令牌的直接请求（curl/脚本）拿不到数据。 —— */
+var GATE = null;
+async function getGate(force){
+  if(GATE && !force && GATE.exp > Date.now()) return GATE;
+  try{
+    var r = await fetch("https://1499683192-f4e14euqer.ap-guangzhou.tencentscf.com/gate", {cache:"no-store"});
+    var j = await r.json();
+    if(j && j.token) GATE = {token:j.token, exp: Date.now() + (j.ttl||120000)};
+  }catch(e){ GATE = null; }
+  return GATE;
+}
+window.getGate = getGate;
 
 /* ==================== 4. 管理员后台 ==================== */
 /* 云函数地址：管理员后台的所有动作都发到它（token 在云端，不经过浏览器） */
@@ -169,7 +229,7 @@ window.openAdmin = async function(){
     '<p style="font-size:13px">正在校验管理员口令…</p></div>');
 
   var salt = (ACCESS && ACCESS.salt) || 'sz1';
-  var r = await window.callCloud('gen', {pw: pw, salt: salt});
+  var r = await window.callCloud('check', {pw: pw, salt: salt});   /* 只校验，不改状态 */
   if(!r || r.code === 401 || r.code === 403){
     w.document.body.innerHTML = '<div style="max-width:760px;margin:0 auto;background:#fff;padding:24px;border-radius:12px">' +
       '<h2>管理员后台</h2><p style="color:#b91c1c">口令不对：' + ((r && r.msg) || '无法连接云端') + '</p></div>';
