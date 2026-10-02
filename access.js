@@ -232,10 +232,13 @@ window.openAdmin = async function(){
   if(!w){ alert('浏览器拦截了新窗口，请允许弹窗'); return; }
   var salt = (ACCESS && ACCESS.salt) || 'sz1';
 
+  /* 🔴 之前「标题叠两层」的原因：第一次 write 后没 close，第二次 write 是**追加**不是覆盖。
+     修法：第一次 write 后立刻 close；校验完要重写时先 w.document.open() 再 write。 */
   w.document.write('<!doctype html><meta charset="utf-8"><title>蛇杖一号 · 管理员后台</title>' +
     '<body style="font:14px/1.8 -apple-system,\'PingFang SC\',sans-serif;background:#f6f7f9;padding:24px">' +
     '<div style="max-width:760px;margin:0 auto"><h2>蛇杖一号 · 管理员后台</h2>' +
     '<p id="tip" style="font-size:13px">正在校验口令…</p></div>');
+  w.document.close();
 
   var r = null;
   try{
@@ -248,7 +251,8 @@ window.openAdmin = async function(){
       '<span style="font-size:12px;opacity:.7">' + (((r && r.msg) || '') || '请检查网络后重试') + '</span>';
     return;
   }
-  /* 口令通过：一次性写出完整后台页面 */
+  /* 口令通过：重开文档流写出完整后台页面 */
+  w.document.open();
   w.document.write(adminPage(salt, pw, r));
   w.document.close();
 };
@@ -263,7 +267,9 @@ function adminPage(salt, pw, state){
     return '<div style="background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:16px 18px;margin-bottom:14px">' +
       '<h3 style="margin:0 0 10px;font-size:15px">' + n + '</h3>' + inner + '</div>';
   }
-  var BTN = 'style="padding:9px 14px;border:0;border-radius:8px;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
+  var BTN_TEAL = 'style="padding:9px 14px;border:0;border-radius:8px;background:#0f766e;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
+  var BTN_RED  = 'style="padding:9px 14px;border:0;border-radius:8px;background:#b91c1c;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
+  var BTN_GRAY = 'style="padding:9px 14px;border:0;border-radius:8px;background:#64748b;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
 
   var html =
     '<div style="max-width:760px;margin:0 auto">' +
@@ -274,9 +280,9 @@ function adminPage(salt, pw, state){
         '<div style="background:#fff8e6;border-left:3px solid #d68910;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;line-height:1.7;margin-bottom:10px">' +
         '「生成随机口令」= 发布一张 24 小时有效的入场券，对方首次进入后<b>必须设置自己的密码</b>。<br>' +
         '重置后：<b>还没登录过的人</b>（拿旧链接的）进不来；<b>已经改过密码的人不受影响</b>（密码存在他们自己浏览器里）。</div>' +
-        '<button id="bgen" ' + BTN + ' background:#0f766e">生成随机口令（24h 有效）</button>' +
-        '<button id="block" ' + BTN + ' background:#b91c1c">立即作废（锁死）</button>' +
-        '<button id="bopen" ' + BTN + ' background:#64748b">关闭密码锁（任何人可进）</button>' +
+        '<button id="bgen" ' + BTN_TEAL + '>生成随机口令（24h 有效）</button>' +
+        '<button id="block" ' + BTN_RED + '>立即作废（锁死）</button>' +
+        '<button id="bopen" ' + BTN_GRAY + '>关闭密码锁（任何人可进）</button>' +
         '<div id="r1" style="margin-top:10px;font-size:13px;min-height:22px"></div>') +
 
       card('当前状态',
@@ -285,7 +291,7 @@ function adminPage(salt, pw, state){
       card('2. 改管理员密码',
         '<input id="np" type="password" placeholder="新管理员密码（至少 6 位）" ' +
           'style="padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;font:inherit;width:220px">' +
-        '<button id="badmin" ' + BTN + ' background:#0f766e">保存</button>' +
+        '<button id="badmin" ' + BTN_TEAL + '>保存</button>' +
         '<div id="r2" style="margin-top:8px;font-size:13px;min-height:22px"></div>') +
 
       card('3. 上传资料到文库',
@@ -294,7 +300,7 @@ function adminPage(salt, pw, state){
         '⚠️ <b>目前索引里只有教材</b>——教材以外的资料<b>故意不建索引</b>（涉版权，回答时可参考但不展示、不引用），' +
         '所以上传了也不会显示在页面上，这是设计如此。</div>' +
         '<input type="file" id="f1" multiple style="margin-bottom:8px">' +
-        '<button id="bup" ' + BTN + ' background:#0f766e">上传</button>' +
+        '<button id="bup" ' + BTN_TEAL + '>上传</button>' +
         '<div id="r3" style="margin-top:8px;font-size:13px"></div>') +
     '</div>';
 
