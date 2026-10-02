@@ -1,0 +1,37 @@
+#!/bin/bash
+# 蛇杖一号 · 腾讯云 Web 函数启动文件
+#
+# ⚠️ 踩过的坑：官方文档写启动命令是 `/var/lang/${lang}${ver}/bin/${lang}`，
+#    但 Node 运行时里二进制叫 **node**（不是 nodejs），写 nodejs 会报
+#    "No such file or directory"（443 错误）。所以这里不写死，自动探测。
+#
+# 官方其他要求（cloud.tencent.com/document/product/583/56126）：
+#   - 文件名必须叫 scf_bootstrap
+#   - 首行必须是 #!/bin/bash
+#   - Web Server 必须监听 0.0.0.0:9000（server.js 已处理）
+
+# 先试 PATH 里的 node（SCF 运行时一定把它加进 PATH）
+if command -v node >/dev/null 2>&1; then
+  exec node server.js
+fi
+
+# 再按已知路径逐个试（万一 PATH 没配）
+for p in \
+  /var/lang/nodejs16.13/bin/node \
+  /var/lang/nodejs18.15/bin/node \
+  /var/lang/nodejs20.15/bin/node \
+  /var/lang/nodejs14.18/bin/node \
+  /var/lang/nodejs12.16/bin/node \
+  /usr/local/bin/node \
+  /usr/bin/node
+do
+  if [ -x "$p" ]; then
+    echo "[shezhang] 用 $p 启动"
+    exec "$p" server.js
+  fi
+done
+
+# 兜底：把能找到的 node 全列出来，方便定位
+echo "[shezhang] 找不到 node，PATH=$PATH"
+ls -1 /var/lang/ 2>/dev/null || echo "  /var/lang/ 不存在"
+exit 1
