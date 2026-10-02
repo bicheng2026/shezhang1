@@ -1,0 +1,16 @@
+{
+  "name": "shezhang",
+  "description": "蛇杖一号 · 班级公告 + 班群消息（0 元 / 腾讯云 EdgeOne）",
+  "version": "1.0.0",
+  "buildCommand": "",
+  "outputDirectory": "./",
+  "functions": {
+    "directory": "functions"
+  },
+  "kvBindings": [
+    {
+      "namespace": "SHEZHANG",
+      "variable": "SHEZHANG"
+    }
+  ]
+}
