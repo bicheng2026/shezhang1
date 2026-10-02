@@ -474,6 +474,7 @@ body.dragging::after{content:"松手即上传 · 图片 / PDF / Word / 文本";p
   </div>
 </div>
 
+<script src="access.js"></script>
 <script>
 /* ============ 配置 ============ */
 const DEFAULT_PW_HASH = "b4217f44f263ff7902be23585e51381d5d80a4d4794a9cedb7df2d17f4d9de77"; // shezhangyihao
@@ -531,21 +532,62 @@ async function sha256(s){
   const h = await crypto.subtle.digest("SHA-256", b);
   return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("");
 }
-function pwHash(){ return localStorage.getItem("sz1_pw") || DEFAULT_PW_HASH; }
+/* 密码锁改为读 data/access.json（运行时配置）：
+   - 管理员在后台改一次 → 写进 GitHub → 全网刷新即生效，不用重新部署网页
+   - 页面本地存过自己的密码（sz1_mypw）时，以本地的为准
+     ⇒ 管理员「重置全网口令」不影响已改过密码的人，但拿旧链接的新人进不来 */
+let ACCESS = null;
+function accBust(u){ return u + (u.indexOf("?")>=0 ? "&" : "?") + "t=" + Date.now(); }
+async function loadAccess(){
+  try{
+    const r = await fetch(accBust("data/access.json"), {cache:"no-store"});
+    ACCESS = r.ok ? await r.json() : {lock:false, _missing:true};
+  }catch(e){ ACCESS = {lock:false, _err:String(e && e.message || e)}; }
+  return ACCESS;
+}
+function accPwHash(pw, salt){ return sha256((salt||"sz1") + "::" + pw); }
+function accNeedForceChange(){
+  /* 管理员发的是临时口令（temp=true）且还没人改过 → 登录后必须设置自己的密码 */
+  return !!(ACCESS && ACCESS.temp && !localStorage.getItem("sz1_mypw"));
+}
 async function unlock(){
-  const v = document.getElementById("pw").value.trim();
+  const el = document.getElementById("pw");
+  const err = document.getElementById("pwerr");
+  const v = el ? el.value.trim() : "";
   if(!v) return;
-  if(await sha256(v) === pwHash()){
-    sessionStorage.setItem("sz1_ok","1");
-    document.getElementById("lock").style.display="none";
-    document.getElementById("app").style.display="flex";
-    try{ await encKey(); }catch(e){ console.warn("密钥派生失败", e); }
-    boot();
-  } else {
-    document.getElementById("pwerr").textContent = "密码不对，再试一次";
+  if(!ACCESS) await loadAccess();
+  const myPw = localStorage.getItem("sz1_mypw");
+  if(myPw){
+    /* 已设过自己密码：只认本地的，管理员重置不影响 */
+    if(await sha256(v) === myPw){ return enterSite(); }
+    if(err) err.textContent = "密码不对，再试一次";
+    return;
   }
+  if(ACCESS.lock === false && !ACCESS.user){ return enterSite(); }
+  if(ACCESS.user && await accPwHash(v, ACCESS.salt) === ACCESS.user){
+    if(accNeedForceChange()){ if(window.showChangePw) return window.showChangePw(); }
+    return enterSite();
+  }
+  if(err) err.textContent = "口令不对，再试一次";
+}
+function enterSite(){
+  sessionStorage.setItem("sz1_ok","1");
+  document.getElementById("lock").style.display="none";
+  document.getElementById("app").style.display="flex";
+  try{ return encKey().then(boot).catch(function(e){ console.warn("密钥派生失败", e); boot(); }); }
+  catch(e){ boot(); }
 }
 document.getElementById("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") unlock(); });
+
+/* ============ 管理员后台入口：按住 Ctrl+Shift+A 呼出（不显眼，防误触） ============ */
+document.addEventListener("keydown", function(e){
+  if(e.ctrlKey && e.shiftKey && (e.key === "A" || e.key === "a")){
+    e.preventDefault();
+    if(window.openAdmin) window.openAdmin();
+  }
+});
+/* 管理员登录后默认放行（lock=false 时本来就不用口令） */
+loadAccess();
 if(!LOCK_ON){
   /* 密码锁已关：直接进入 */
   sessionStorage.setItem("sz1_ok","1");
