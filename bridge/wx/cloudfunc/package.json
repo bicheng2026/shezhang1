@@ -1,0 +1,9 @@
+{
+  "name": "shezhangSync",
+  "version": "1.0.0",
+  "description": "蛇杖一号 · 小程序数据同步（云函数 URL 化）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}
