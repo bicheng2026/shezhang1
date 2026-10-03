@@ -2953,6 +2953,12 @@ renderNetStat();
      或本机 pull_qq.py 生成。只放有信息量的通知类内容，不含姓名/学号/手机号。
      URL 带时间戳 + no-store，绕开 GitHub Pages 的 10 分钟 CDN 缓存。 */
   var qqDigestCache = null;
+  /* 本机当前时间 YYYY-MM-DD HH:MM（用于在面板上证明「页面确实刚刷新过」） */
+  function szNow(){
+    var d = new Date(), p = function(n){ return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) +
+      " " + p(d.getHours()) + ":" + p(d.getMinutes());
+  }
   function renderQqDigest(j, err){
     var box = document.getElementById("qqdigest");
     if(!box) return;
@@ -2966,7 +2972,9 @@ renderNetStat();
       return;
     }
     var h = '<div style="font-size:12px;opacity:.72;margin:0 0 8px">' + esc(j.note || "") +
-      '<br>更新于 ' + esc(j.updated_text || "") + '　共 ' + j.items.length + ' 条</div>' +
+      '<br>最后一条群消息：' + esc(j.updated_text || "") + '　共 ' + j.items.length + ' 条' +
+      '<br>本页刷新于：' + szNow() +
+      '<br><span style="opacity:.85">注意：上一行是「群里最后一条被收录的通知」的时间，不是刷新时间——群里没有新通知时，它就一直停在那一刻。</span></div>' +
       '<ul style="list-style:none;margin:0;padding:0">';
     for(var i=0;i<j.items.length;i++){
       var it = j.items[i];
