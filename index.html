@@ -845,11 +845,12 @@ function bindAdmin(w, salt, pw){
 </script>
 <script>
 /* ============ 配置 ============ */
-const DEFAULT_PW_HASH = "b4217f44f263ff7902be23585e51381d5d80a4d4794a9cedb7df2d17f4d9de77"; // shezhangyihao
-/* ⚠️ 已废弃（2026-10-03）：进站是否要密码**改由运行时 data/access.json 的 lock 字段决定**，
-   后台点一下按钮 → 云端写 GitHub → 全网刷新即生效。这个常量只剩兼容占位，改它不再有任何效果。
-   🔴 曾经的 bug：这条写死 false，导致后台「生成口令 / 立即锁死」全部形同虚设。 */
-const LOCK_ON = false;
+/* 🔒 2026-10-03 删除两个写死的常量（都是泄露点/死代码）：
+   - DEFAULT_PW_HASH：旧版把口令哈希写死在页面里，**注释里还直接跟了明文**。
+     这是公开仓库 + Pages 上的真实泄露点，已整条删除，口令只走 data/access.json 的哈希。
+   - LOCK_ON：进站判据早已改成读运行时 data/access.json 的 lock 字段，此常量全局无人引用。
+   🔴 曾经的 bug：LOCK_ON 写死 false，导致后台「生成口令 / 立即锁死」全部形同虚设。
+   现在进站是否要密码，**只看 data/access.json**（后台点一下 → 云端写 GitHub → 全网刷新即生效）。 */
 const IDX = "data/index.json", LIBP = "lib/";
 /* ---- 文库正文加密（AES-256-CTR）：线上只存密文，密文与明文等长，
        所以索引里的字节偏移、Range 取文逻辑完全不变，只在读出来后加一步解密。 ---- */
