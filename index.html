@@ -733,10 +733,17 @@ window.openAdmin = async function(){
   bindAdmin(w, salt, pw);   /* 关键：父窗口直接绑事件 */
 };
 
+/* 状态行渲染（点完按钮要重绘，所以抽成独立函数） */
+function statHtml(st){
+  var untilTxt = (st && st.until) ? new Date(st.until).toLocaleString('zh-CN') : '—';
+  var locked = !!(st && st.acc_public && st.acc_public.lock);
+  var temp   = !!(st && st.acc_public && st.acc_public.temp);
+  return '状态：<b>' + (locked ? '已锁（需口令）' : '开放（任何人可进）') + '</b>　' +
+    (temp ? '临时口令生效中（对方首次登录须改密码）' : '非临时口令') +
+    '<br>失效时间：' + untilTxt;
+}
+
 function adminPageHtml(state){
-  var untilTxt = (state && state.until) ? new Date(state.until).toLocaleString('zh-CN') : '—';
-  var locked = (state && state.acc_public && state.acc_public.lock);
-  var temp   = (state && state.acc_public && state.acc_public.temp);
   function card(n, inner){
     return '<div style="background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:16px 18px;margin-bottom:14px">' +
       '<h3 style="margin:0 0 10px;font-size:15px">' + n + '</h3>' + inner + '</div>';
@@ -758,9 +765,9 @@ function adminPageHtml(state){
       btn('bopen','关闭密码锁（任何人可进）','#64748b') +
       '<div id="r1" style="margin-top:10px;font-size:13px;min-height:22px"></div>') +
     card('当前状态',
-      '<div style="font-size:13px">状态：<b>' + (locked ? '已锁' : '开放（任何人可进）') + '</b>　' +
-      (temp ? '临时口令生效中（对方首次登录须改密码）' : '非临时口令') +
-      '<br>失效时间：' + untilTxt + '</div>') +
+      '<div id="statbox" style="font-size:13px">' + statHtml(state) + '</div>' +
+      '<div style="margin-top:8px;font-size:11px;opacity:.6;line-height:1.7">' +
+      '改完状态后，<b>同学要刷新网页</b>才生效（已经打开页面的不受影响）。</div>') +
     card('2. 改管理员密码',
       '<input id="np" type="password" placeholder="新管理员密码（至少 6 位）" ' +
         'style="padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;font:inherit;width:220px">' +
@@ -782,6 +789,16 @@ function bindAdmin(w, salt, pw){
     var e = d.getElementById(id);
     if(e){ e.innerHTML = html; if(color) e.style.color = color; }
   }
+  /* 点完按钮重新读一次云端真实状态，刷新「当前状态」卡片 ——
+     否则卡片还是进后台那一刻的快照，看起来像「没生效」（2026-10-03 修）。 */
+  async function refreshStatus(){
+    var r = null;
+    try{ r = await window.callCloud('check', {pw: pw, salt: salt}); }catch(e){ r = null; }
+    if(r && r.acc_public){
+      var b = d.getElementById('statbox');
+      if(b) b.innerHTML = statHtml(r);
+    }
+  }
   async function act(a){
     set('r1', '处理中…', '#667085');
     var r = null;
@@ -795,6 +812,7 @@ function bindAdmin(w, salt, pw){
       } else {
         set('r1', '已关闭密码锁，任何人可进。', '#059669');
       }
+      await refreshStatus();
     } else {
       set('r1', '失败：' + ((r && r.msg) || '未知错误'), '#b91c1c');
     }
@@ -828,7 +846,9 @@ function bindAdmin(w, salt, pw){
 <script>
 /* ============ 配置 ============ */
 const DEFAULT_PW_HASH = "b4217f44f263ff7902be23585e51381d5d80a4d4794a9cedb7df2d17f4d9de77"; // shezhangyihao
-/* 密码锁总开关：false = 打开即用、不弹密码框；想恢复密码锁把它改回 true 即可 */
+/* ⚠️ 已废弃（2026-10-03）：进站是否要密码**改由运行时 data/access.json 的 lock 字段决定**，
+   后台点一下按钮 → 云端写 GitHub → 全网刷新即生效。这个常量只剩兼容占位，改它不再有任何效果。
+   🔴 曾经的 bug：这条写死 false，导致后台「生成口令 / 立即锁死」全部形同虚设。 */
 const LOCK_ON = false;
 const IDX = "data/index.json", LIBP = "lib/";
 /* ---- 文库正文加密（AES-256-CTR）：线上只存密文，密文与明文等长，
@@ -936,17 +956,30 @@ document.addEventListener("keydown", function(e){
     if(window.openAdmin) window.openAdmin();
   }
 });
-/* 管理员登录后默认放行（lock=false 时本来就不用口令） */
-loadAccess();
-if(!LOCK_ON){
-  /* 密码锁已关：直接进入 */
-  sessionStorage.setItem("sz1_ok","1");
-  document.getElementById("lock").style.display="none";
-  document.getElementById("app").style.display="flex";
-} else if(sessionStorage.getItem("sz1_ok")==="1"){
-  document.getElementById("lock").style.display="none";
-  document.getElementById("app").style.display="flex";
-}
+/* 进站判断：**以运行时配置 data/access.json 为准**（后台点一下 → 写 GitHub → 全网刷新即生效）
+   🔴 2026-10-03 修复：以前这里读的是写死的 LOCK_ON（恒为 false），
+      导致后台「生成口令 / 立即锁死」形同虚设 —— 云函数明明把 lock 置成了 true，前台却永远直通。 */
+(async function initGate(){
+  await loadAccess();
+  var lockEl = document.getElementById("lock");
+  var appEl  = document.getElementById("app");
+  function pass(){
+    sessionStorage.setItem("sz1_ok","1");
+    lockEl.style.display = "none";
+    appEl.style.display  = "flex";
+  }
+  /* 读不到配置时按「开锁」放行 —— 宁可让人进，也别把站长自己关在门外 */
+  var locked = !(ACCESS && ACCESS.lock === false);
+  if(!locked) return pass();
+  if(sessionStorage.getItem("sz1_ok") === "1") return pass();
+  /* 需要口令：保持锁屏 */
+  lockEl.style.display = "flex";
+  appEl.style.display  = "none";
+  var err = document.getElementById("pwerr");
+  if(err && ACCESS && ACCESS.until && Date.now() > Number(ACCESS.until)){
+    err.textContent = "临时口令已过期，请向班长要新的";
+  }
+})();
 
 /* ============ 全局停用开关（站长 deploy --down / --up 触发）============ */
 async function checkStatus(){

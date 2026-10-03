@@ -224,6 +224,11 @@ window.callCloud = async function(action, obj){
    2) 后台脚本用 `window.addEventListener("load", ...)` 渲染，但 document.write 之后
       load 事件早就过了，监听器永远不触发 → 内容根本没渲染。
    现在改成：**一次性 document.write 出完整 HTML**（含 CSS 与内联脚本，立即执行）。 */
+/* ==================== 管理员后台（2026-10-03 第三版）====================
+   🔴 前两版为什么不行（记下来）：
+   版1：把完整 <body> 塞进 body.innerHTML → 浏览器忽略 → 空白
+   版2：用字符串拼 <script> 再 document.write → **脚本不执行**，按钮渲染出来但点不动
+   版3（现在）：**不拼脚本**。写纯 HTML，再由父窗口直接操作子窗口 DOM、addEventListener 绑事件。 */
 window.openAdmin = async function(){
   if(!ACCESS) await loadAccess();
   var pw = prompt('管理员密码');
@@ -232,109 +237,130 @@ window.openAdmin = async function(){
   if(!w){ alert('浏览器拦截了新窗口，请允许弹窗'); return; }
   var salt = (ACCESS && ACCESS.salt) || 'sz1';
 
-  /* 🔴 之前「标题叠两层」的原因：第一次 write 后没 close，第二次 write 是**追加**不是覆盖。
-     修法：第一次 write 后立刻 close；校验完要重写时先 w.document.open() 再 write。 */
   w.document.write('<!doctype html><meta charset="utf-8"><title>蛇杖一号 · 管理员后台</title>' +
-    '<body style="font:14px/1.8 -apple-system,\'PingFang SC\',sans-serif;background:#f6f7f9;padding:24px">' +
+    '<body style="font:14px/1.8 -apple-system,\'PingFang SC\',sans-serif;background:#f6f7f9;padding:24px;margin:0">' +
     '<div style="max-width:760px;margin:0 auto"><h2>蛇杖一号 · 管理员后台</h2>' +
     '<p id="tip" style="font-size:13px">正在校验口令…</p></div>');
   w.document.close();
 
   var r = null;
-  try{
-    r = await window.callCloud('check', {pw: pw, salt: salt});   /* 只校验，不改状态 */
-  }catch(e){ r = null; }
-
+  try{ r = await window.callCloud('check', {pw: pw, salt: salt}); }catch(e){ r = null; }
   if(!r || r.code === 401 || r.code === 403){
-    w.document.getElementById('tip').innerHTML =
-      '<span style="color:#b91c1c">口令不对，或连不上云端。</span><br>' +
-      '<span style="font-size:12px;opacity:.7">' + (((r && r.msg) || '') || '请检查网络后重试') + '</span>';
+    var tip = w.document.getElementById('tip');
+    if(tip) tip.innerHTML = '<span style="color:#b91c1c">口令不对，或连不上云端。</span>';
     return;
   }
-  /* 口令通过：重开文档流写出完整后台页面 */
   w.document.open();
-  w.document.write(adminPage(salt, pw, r));
+  w.document.write(adminPageHtml(r));
   w.document.close();
+  bindAdmin(w, salt, pw);   /* 关键：父窗口直接绑事件 */
 };
 
-/* ---- 后台页面：完整 HTML（含 CSS + 立即执行的脚本） ---- */
-function adminPage(salt, pw, state){
-  var untilTxt = (state && state.until) ? new Date(state.until).toLocaleString('zh-CN') : '—';
-  var lockTxt = (state && state.acc_public && state.acc_public.lock) ? '<b>已锁</b>' : '<b>开放（任何人可进）</b>';
-  var tempTxt = (state && state.acc_public && state.acc_public.temp) ? '临时口令生效中（对方首次登录须改密码）' : '非临时口令';
+/* 状态行渲染（点完按钮要重绘，所以抽成独立函数） */
+function statHtml(st){
+  var untilTxt = (st && st.until) ? new Date(st.until).toLocaleString('zh-CN') : '—';
+  var locked = !!(st && st.acc_public && st.acc_public.lock);
+  var temp   = !!(st && st.acc_public && st.acc_public.temp);
+  return '状态：<b>' + (locked ? '已锁（需口令）' : '开放（任何人可进）') + '</b>　' +
+    (temp ? '临时口令生效中（对方首次登录须改密码）' : '非临时口令') +
+    '<br>失效时间：' + untilTxt;
+}
 
+function adminPageHtml(state){
   function card(n, inner){
     return '<div style="background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:16px 18px;margin-bottom:14px">' +
       '<h3 style="margin:0 0 10px;font-size:15px">' + n + '</h3>' + inner + '</div>';
   }
-  var BTN_TEAL = 'style="padding:9px 14px;border:0;border-radius:8px;background:#0f766e;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
-  var BTN_RED  = 'style="padding:9px 14px;border:0;border-radius:8px;background:#b91c1c;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
-  var BTN_GRAY = 'style="padding:9px 14px;border:0;border-radius:8px;background:#64748b;color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0"';
-
-  var html =
+  function btn(id, text, bg){
+    return '<button id="' + id + '" style="padding:9px 14px;border:0;border-radius:8px;background:' + bg +
+      ';color:#fff;font:inherit;cursor:pointer;margin:4px 6px 4px 0">' + text + '</button>';
+  }
+  return '<style>body{margin:0}button:hover{filter:brightness(1.08)}</style>' +
     '<div style="max-width:760px;margin:0 auto">' +
-      '<h2 style="margin:0 0 4px">蛇杖一号 · 管理员后台</h2>' +
-      '<p style="font-size:12px;opacity:.65;margin:0 0 18px">口令正确 · 云端连接正常</p>' +
+    '<h2 style="margin:0 0 4px">蛇杖一号 · 管理员后台</h2>' +
+    '<p style="font-size:12px;opacity:.65;margin:0 0 18px">口令正确 · 云端连接正常</p>' +
+    card('1. 全网口令',
+      '<div style="background:#fff8e6;border-left:3px solid #d68910;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;line-height:1.7;margin-bottom:10px">' +
+      '「生成随机口令」= 发一张 <b>24 小时有效</b>的入场券，对方首次进入后<b>必须设置自己的密码</b>。<br>' +
+      '重置后：<b>还没登录过的人</b>（拿旧链接的）进不来；<b>已经改过密码的人不受影响</b>（密码存在他们自己浏览器里）。</div>' +
+      btn('bgen','生成随机口令（24h 有效）','#0f766e') +
+      btn('block','立即作废（锁死）','#b91c1c') +
+      btn('bopen','关闭密码锁（任何人可进）','#64748b') +
+      '<div id="r1" style="margin-top:10px;font-size:13px;min-height:22px"></div>') +
+    card('当前状态',
+      '<div id="statbox" style="font-size:13px">' + statHtml(state) + '</div>' +
+      '<div style="margin-top:8px;font-size:11px;opacity:.6;line-height:1.7">' +
+      '改完状态后，<b>同学要刷新网页</b>才生效（已经打开页面的不受影响）。</div>') +
+    card('2. 改管理员密码',
+      '<input id="np" type="password" placeholder="新管理员密码（至少 6 位）" ' +
+        'style="padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;font:inherit;width:220px">' +
+      btn('badmin','保存','#0f766e') +
+      '<div id="r2" style="margin-top:8px;font-size:13px;min-height:22px"></div>') +
+    card('3. 上传资料到文库',
+      '<div style="font-size:12px;opacity:.8;line-height:1.7;margin-bottom:8px">' +
+      '上传到 <code>lib/</code>。<br>⚠️ <b>目前索引里只有教材</b>——教材以外的资料<b>故意不建索引</b>' +
+      '（涉版权，回答时可参考但不展示、不引用），所以上传了也不会显示，这是设计如此。</div>' +
+      '<input type="file" id="f1" multiple style="margin-bottom:8px">' +
+      btn('bup','上传','#0f766e') +
+      '<div id="r3" style="margin-top:8px;font-size:13px"></div>') +
+  '</div>';
+}
 
-      card('1. 全网口令',
-        '<div style="background:#fff8e6;border-left:3px solid #d68910;padding:9px 12px;border-radius:0 6px 6px 0;font-size:12px;line-height:1.7;margin-bottom:10px">' +
-        '「生成随机口令」= 发布一张 24 小时有效的入场券，对方首次进入后<b>必须设置自己的密码</b>。<br>' +
-        '重置后：<b>还没登录过的人</b>（拿旧链接的）进不来；<b>已经改过密码的人不受影响</b>（密码存在他们自己浏览器里）。</div>' +
-        '<button id="bgen" ' + BTN_TEAL + '>生成随机口令（24h 有效）</button>' +
-        '<button id="block" ' + BTN_RED + '>立即作废（锁死）</button>' +
-        '<button id="bopen" ' + BTN_GRAY + '>关闭密码锁（任何人可进）</button>' +
-        '<div id="r1" style="margin-top:10px;font-size:13px;min-height:22px"></div>') +
-
-      card('当前状态',
-        '<div style="font-size:13px">状态：' + lockTxt + '　' + tempTxt + '<br>失效时间：' + untilTxt + '</div>') +
-
-      card('2. 改管理员密码',
-        '<input id="np" type="password" placeholder="新管理员密码（至少 6 位）" ' +
-          'style="padding:9px 11px;border:1px solid #d0d5dd;border-radius:8px;font:inherit;width:220px">' +
-        '<button id="badmin" ' + BTN_TEAL + '>保存</button>' +
-        '<div id="r2" style="margin-top:8px;font-size:13px;min-height:22px"></div>') +
-
-      card('3. 上传资料到文库',
-        '<div style="font-size:12px;opacity:.8;line-height:1.7;margin-bottom:8px">' +
-        '上传到 <code>lib/</code>。<br>' +
-        '⚠️ <b>目前索引里只有教材</b>——教材以外的资料<b>故意不建索引</b>（涉版权，回答时可参考但不展示、不引用），' +
-        '所以上传了也不会显示在页面上，这是设计如此。</div>' +
-        '<input type="file" id="f1" multiple style="margin-bottom:8px">' +
-        '<button id="bup" ' + BTN_TEAL + '>上传</button>' +
-        '<div id="r3" style="margin-top:8px;font-size:13px"></div>') +
-    '</div>';
-
-  var script =
-    '<script>' +
-    'var SALT=' + JSON.stringify(salt) + ', PW=' + JSON.stringify(pw) + ';' +
-    "var CLOUD='https://1499683192-f4e14euqer.ap-guangzhou.tencentscf.com';" +
-    "async function cc(a,o){var r=await fetch(CLOUD+'/admin?action='+encodeURIComponent(a)," +
-      "{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o||{})});return await r.json();}" +
-    "function set(t,html,color){var e=document.getElementById(t);if(e){e.innerHTML=html;if(color)e.style.color=color;}}" +
-    "async function act(a){" +
-      " var r1=document.getElementById('r1'); if(r1) r1.textContent='处理中…';" +
-      " var r=await cc(a,{pw:PW,salt:SALT});" +
-      " if(r&&(r.code===0||r.action)){" +
-      "   if(a==='gen'){set('r1','新口令已生成（24 小时后失效）：<b style='font-size:16px'>'+r.msg+'<\/b>" +
-      "<br>把它和网址一起发给他们，他们首次进入后必须设置自己的密码。','#059669');}" +
-      "   else{set('r1',(a==='lock'?'已作废并锁死。拿旧链接的人进不来了。':'已关闭密码锁，任何人可进。'),'#059669');}" +
-      " } else { set('r1','失败：'+((r&&r.msg)||'未知错误'),'#b91c1c'); } }" +
-    "document.getElementById('bgen').onclick=function(){act('gen')};" +
-    "document.getElementById('block').onclick=function(){act('lock')};" +
-    "document.getElementById('bopen').onclick=function(){act('open')};" +
-    "document.getElementById('badmin').onclick=async function(){" +
-      " var n=document.getElementById('np').value;" +
-      " if(n.length<6){set('r2','至少 6 位','#b91c1c');return;}" +
-      " var r=await cc('adminpw',{pw:PW,salt:SALT,newpw:n});" +
-      " if(r&&r.code===0){set('r2','已修改。下次进后台请用新密码。','#059669'); PW=n;}" +
-      " else{set('r2','失败：'+((r&&r.msg)||''),'#b91c1c');} };" +
-    "document.getElementById('bup').onclick=function(){" +
-      " var f=document.getElementById('f1').files;" +
-      " if(!f.length){set('r3','先选文件','#b91c1c');return;}" +
-      " set('r3','已选 '+f.length+' 个文件。上传到 GitHub 需要写权限（token 只在云端，不经过浏览器），请让毕成代劳。','#667085'); };" +
-    '<' + '/script>';
-
-  return '<style>body{margin:0}button:hover{filter:brightness(1.08)}</style>' + html + script;
+function bindAdmin(w, salt, pw){
+  var d = w.document;
+  function set(id, html, color){
+    var e = d.getElementById(id);
+    if(e){ e.innerHTML = html; if(color) e.style.color = color; }
+  }
+  /* 点完按钮重新读一次云端真实状态，刷新「当前状态」卡片 ——
+     否则卡片还是进后台那一刻的快照，看起来像「没生效」（2026-10-03 修）。 */
+  async function refreshStatus(){
+    var r = null;
+    try{ r = await window.callCloud('check', {pw: pw, salt: salt}); }catch(e){ r = null; }
+    if(r && r.acc_public){
+      var b = d.getElementById('statbox');
+      if(b) b.innerHTML = statHtml(r);
+    }
+  }
+  async function act(a){
+    set('r1', '处理中…', '#667085');
+    var r = null;
+    try{ r = await window.callCloud(a, {pw: pw, salt: salt}); }catch(e){ r = null; }
+    if(r && (r.code === 0 || r.action)){
+      if(a === 'gen'){
+        set('r1', '新口令已生成（24 小时后失效）：<b style="font-size:16px">' + r.msg +
+          '</b><br>把它和网址一起发给他们，他们首次进入后必须设置自己的密码。', '#059669');
+      } else if(a === 'lock'){
+        set('r1', '已作废并锁死。拿旧链接的人进不来了。', '#059669');
+      } else {
+        set('r1', '已关闭密码锁，任何人可进。', '#059669');
+      }
+      await refreshStatus();
+    } else {
+      set('r1', '失败：' + ((r && r.msg) || '未知错误'), '#b91c1c');
+    }
+  }
+  var g = d.getElementById('bgen'), l = d.getElementById('block'), o = d.getElementById('bopen');
+  if(g) g.addEventListener('click', function(){ act('gen'); });
+  if(l) l.addEventListener('click', function(){ act('lock'); });
+  if(o) o.addEventListener('click', function(){ act('open'); });
+  var ba = d.getElementById('badmin');
+  if(ba) ba.addEventListener('click', async function(){
+    var n = d.getElementById('np').value;
+    if(n.length < 6){ set('r2','至少 6 位','#b91c1c'); return; }
+    var r = null;
+    try{ r = await window.callCloud('adminpw', {pw: pw, salt: salt, newpw: n}); }catch(e){ r = null; }
+    /* 云函数 adminpw 成功时返回 {action:'adminpw', msg:'adminpw-updated'}，没有 code:0
+       —— 所以判断要放宽：有 action 字段就算成功（跟 act() 里同一套判据）。 */
+    if(r && (r.code === 0 || r.action === 'adminpw')) set('r2','已修改。下次进后台请用新密码。','#059669');
+    else set('r2','失败：' + ((r && r.msg) || ''), '#b91c1c');
+  });
+  var bu = d.getElementById('bup');
+  if(bu) bu.addEventListener('click', function(){
+    var f = d.getElementById('f1').files;
+    if(!f.length){ set('r3','先选文件','#b91c1c'); return; }
+    set('r3', '已选 ' + f.length + ' 个文件。上传到 GitHub 需要写权限（token 只在云端，不经过浏览器），请让毕成代劳。', '#667085');
+  });
 }
 
 })();
