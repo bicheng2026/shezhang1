@@ -1024,8 +1024,9 @@ async function boot(){
     const raw = new TextDecoder("utf-8").decode(await decBytes(INDEX_REL, buf, 0));
     const j = JSON.parse(raw);
     DOCS = j.docs;
-    const n = DOCS.reduce((a,d)=>a+d.s.length,0);
-    document.getElementById("stat").textContent = `${DOCS.length} 部文献 · ${n} 章节`;
+    const _tt = DOCS.filter(d => catOf(d.f) === "① 教材");
+    const n = _tt.reduce((a,d)=>a+d.s.length,0);
+    document.getElementById("stat").textContent = `${_tt.length} 部教材 · ${n} 章节`;
     renderChat(); buildSidebar();   /* 恢复上次会话；无历史则显示欢迎语 */
   }catch(e){
     document.getElementById("loading").textContent = "索引载入失败：" + e.message;
@@ -2116,9 +2117,10 @@ function renderChat(){
   const s = SS.cur();
   c.innerHTML = "";
   if(!s.msgs.length){
-    const n = DOCS.reduce((a,d)=>a+d.s.length,0);
+    const _t = DOCS.filter(d => catOf(d.f) === "① 教材");
+    const n = _t.reduce((a,d)=>a+d.s.length,0);
     c.innerHTML = `<div id="loading"><div style="color:var(--teal);font-size:15px;margin-bottom:8px">蛇杖一号 · 文库问答</div>
-      <div>已载入 ${DOCS.length} 部文献、${n} 个章节。<br>专业课问题、病例分析、复习策略、实验报告、实习心态——都可以问，我会调取教材原文为你参谋。</div>
+      <div>已载入 ${_t.length} 部教材、${n} 个章节。<br>专业课问题、病例分析、复习策略、实验报告、实习心态——都可以问，我会调取教材原文为你参谋。</div>
       <div style="margin-top:14px;font-size:12px">试试：「休克的分期和机制怎么理解」「酸碱失衡怎么判断」「这章该怎么复习」「这个病例的鉴别诊断思路」</div>
       <div style="margin-top:10px;font-size:11px;opacity:.6">当前版本 v${VERSION}${MEM.list.length ? ` · 长期记忆 ${MEM.list.length} 条` : ""}</div></div>`;
     return;
@@ -2724,10 +2726,12 @@ const _CAT_ORDER = ["① 教材","② 课件题库","③ 学科资料","④ 待�
 let _docsAll = [];
 function buildSidebar(){
   if(!DOCS || !DOCS.length) return;
-  _docsAll = DOCS.slice();
+  /* 侧边栏与「文库导航」只列教材（2026-10-03 主公交代：侧边栏只要教材）。
+     ⚠️ 索引本身仍是全量 308 部，AI 问答调取原文不受影响，只是不在这儿列出来。 */
+  _docsAll = DOCS.filter(d => catOf(d.f) === "① 教材");
   renderDocList(_docsAll);
   const sf = document.getElementById("sidefoot");
-  if(sf) sf.textContent = DOCS.length + " 部文献 · 离线可用";
+  if(sf) sf.textContent = _docsAll.length + " 部教材 · 离线可用";
 }
 function renderDocList(docs){
   const list = document.getElementById("doclist");
@@ -2817,21 +2821,22 @@ async function openSec(d, i){
 }
 function renderHome(){
   showReader();
+  const _tn = DOCS.filter(d => catOf(d.f) === "① 教材");
   document.getElementById("rdTitle").textContent = "蛇杖一号 · 文库";
-  document.getElementById("rdSub").textContent = (DOCS.length) + " 部教材 / 课件 / 学科资料 · 完全离线";
+  document.getElementById("rdSub").textContent = _tn.length + " 部教材 · 完全离线";
   const rl = document.getElementById("rdList");
   rl.innerHTML = '<div class="rdhint">← 在左侧「文库导航」挑一部文献</div>';
   const rt = document.getElementById("rdText");
   rt.innerHTML = "";
-  let secCount = 0; try { secCount = DOCS.reduce((a,d) => a + (d.s ? d.s.length : 0), 0); } catch(e){}
+  let secCount = 0; try { secCount = _tn.reduce((a,d) => a + (d.s ? d.s.length : 0), 0); } catch(e){}
   const chips = (typeof GUIDE !== "undefined" && GUIDE) ? GUIDE.map(g => '<span class="gchip">'+g.name+'</span>').join("") : "";
   const wrap = document.createElement("div");
   wrap.className = "home";
   wrap.innerHTML =
     '<div class="homeh">欢迎来到蛇杖一号桌面版</div>' +
-    '<p class="homep">这里是医学教材原文知识库，所有内容都在你本机，断网也能读、能检索。左侧按「教材 / 课件题库 / 学科资料」分类浏览，点文献再点章节即可读原文。</p>' +
+    '<p class="homep">这里是医学教材原文知识库，所有内容都在你本机，断网也能读、能检索。左侧按分类浏览教材，点文献再点章节即可读原文。</p>' +
     '<div class="homegrid">' +
-      '<div class="homecard"><div class="hc">'+DOCS.length+'</div><div>部文献可阅</div></div>' +
+      '<div class="homecard"><div class="hc">'+_tn.length+'</div><div>部教材可阅</div></div>' +
       '<div class="homecard"><div class="hc">'+secCount+'</div><div>个章节</div></div>' +
       '<div class="homecard"><div class="hc">离线</div><div>检索 / 阅读</div></div>' +
     '</div>' +
