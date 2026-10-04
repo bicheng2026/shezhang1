@@ -546,6 +546,8 @@ function showLock(msg){
   var app = document.getElementById('app'); if(app) app.style.display = 'none';
   sessionStorage.removeItem('sz1_ok');
 }
+/* ⚠️ 死代码（2026-10-04 确认）：全页无任何地方调用它 —— 锁屏按钮走的是 unlock()。
+   保留只为留痕。若将来启用，注意它**完全不看本地密码 sz1_mypw**，与 unlock() 口径不一致。 */
 async function tryUnlock(){
   var pwEl = document.getElementById('pw');
   var pw = pwEl ? pwEl.value : '';
@@ -596,8 +598,10 @@ window.showChangePw = function(){
     var e = document.getElementById('cperr');
     if(a.length < 6){ e.textContent = '至少 6 位'; return; }
     if(a !== b){ e.textContent = '两次输入不一致'; return; }
-    /* 密码存本浏览器（不上传、不进仓库）——重置全网口令不会影响已改密码的人 */
-    try{ localStorage.setItem('sz1_mypw', a); }catch(_){}
+    /* 密码存本浏览器（不上传、不进仓库）——重置全网口令不会影响已改密码的人。
+       🔴 2026-10-04 修复：以前这里存的是**明文**，而 unlock() 拿 sha256(输入) 去比，
+          两边口径不一致 → 「本地保存的密码」永远对不上。必须存哈希。 */
+    try{ localStorage.setItem('sz1_mypw', await sha256(a)); }catch(_){}
     var l = document.getElementById('lock'); if(l) l.style.display = 'none';
     var ap = document.getElementById('app'); if(ap) ap.style.display = 'flex';
     sessionStorage.setItem('sz1_ok','1');
@@ -929,17 +933,26 @@ async function unlock(){
   if(!ACCESS) await loadAccess();
   const myPw = localStorage.getItem("sz1_mypw");
   if(myPw){
-    /* 已设过自己密码：只认本地的，管理员重置不影响 */
-    if(await sha256(v) === myPw){ return enterSite(); }
-    if(err) err.textContent = "密码不对，再试一次";
-    return;
+    /* 已设过自己密码：优先认本地的（管理员重置全网口令不影响） */
+    let ok = false;
+    if(/^[0-9a-f]{64}$/.test(myPw)){
+      ok = (await sha256(v) === myPw);
+    }else{
+      /* 兼容 2026-10-04 之前写进 localStorage 的明文（旧 bug 留下的数据）；
+         比中就地升级成哈希，之后按新口径走。 */
+      ok = (v === myPw);
+      if(ok){ try{ localStorage.setItem("sz1_mypw", await sha256(v)); }catch(_){} }
+    }
+    if(ok) return enterSite();
+    /* 🔴 这里以前是 return —— 一旦本地密码状态坏掉（或忘了），
+       连班长发的临时口令都用不了，人直接被关在门外。改成继续往下试。 */
   }
   if(ACCESS.lock === false && !ACCESS.user){ return enterSite(); }
   if(ACCESS.user && await accPwHash(v, ACCESS.salt) === ACCESS.user){
     if(accNeedForceChange()){ if(window.showChangePw) return window.showChangePw(); }
     return enterSite();
   }
-  if(err) err.textContent = "口令不对，再试一次";
+  if(err) err.textContent = myPw ? "本机密码和当前全网口令都不对，再试一次" : "口令不对，再试一次";
 }
 function enterSite(){
   sessionStorage.setItem("sz1_ok","1");
